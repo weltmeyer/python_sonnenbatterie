@@ -33,7 +33,7 @@ class sonnenbatterie:
         )
         if not isretry and response.status_code==401:
             self._login()
-            return self._get(self,what,True)
+            return self._get(what,True)
         if response.status_code != 200:
             response.raise_for_status()
 
