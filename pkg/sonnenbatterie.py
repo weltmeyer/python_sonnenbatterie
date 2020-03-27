@@ -1,6 +1,6 @@
 import requests
 import hashlib
-from pprint import pprint
+
 class sonnenbatterie:
     def __init__(self,username,password,ipaddress):
         self.username=username
