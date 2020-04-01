@@ -53,6 +53,9 @@ class sonnenbatterie:
 
     def get_status(self):
         return self._get("v1/status")
+        
+    def get_battery(self):
+        return self._get("battery")
 
         
         
