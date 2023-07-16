@@ -74,7 +74,7 @@ class sonnenbatterie:
         return self._get(SONNEN_API_PATH_SYSTEM_DATA)
 
     def get_status(self):
-        return self._getV1(SONNEN_API_PATH_STATUS)
+        return self._get(SONNEN_API_PATH_STATUS)
         
     def get_battery(self):
         return self._get(SONNEN_API_PATH_BATTERY)
