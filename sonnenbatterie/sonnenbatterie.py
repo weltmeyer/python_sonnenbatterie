@@ -122,7 +122,7 @@ class sonnenbatterie:
     def set_operating_mode(self, operating_mode):
         return self.set_configuration(SONNEN_CONFIGURATION_OPERATING_MODE, operating_mode)
     
-    def set_operaing_mode_by_name(self, operating_mode_name):
+    def set_operating_mode_by_name(self, operating_mode_name):
         return self.set_operating_mode(SONNEN_OPERATING_MODE_NAMES_TO_OPERATING_MODES.get(operating_mode_name))
     
     def get_battery_reserve(self):
