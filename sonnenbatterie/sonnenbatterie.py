@@ -12,6 +12,7 @@ class sonnenbatterie:
         self.password=password
         self.ipaddress=ipaddress
         self.baseurl='http://'+self.ipaddress+'/api/'
+        self.setpoint=self.baseurl+'v2/setpoint/'
         self._login()
 
 
@@ -55,7 +56,25 @@ class sonnenbatterie:
             response.raise_for_status()
         return response.json()
 
+    # these are special purpose endpoints, there is no associated data that I'm aware of
+    # while I don't have details I belive this is probabaly onlu useful in manual more
+    # and it's probabaly possible to extact the actuall flow rate in operation  
+    # looking at the status.state_battery_inout value
+    def set_manual_flowrate(self, direction, rate):
+        path=self.setpoint+direction+"/"+str(rate)
+        response=requests.post(url=path,
+            headers={'Auth-Token': self.token,'Content-Type': 'application/json'}
+        )
+        return (response.status_code == 201)
+    
+    def set_discharge(self, rate):
+        return self.set_manual_flowrate(SONNEN_DISCHARGE_PATH, rate)
+    
 
+    def set_charge(self, rate):
+        return self.set_manual_flowrate(SONNEN_CHARGE_PATH, rate)
+
+    # more general purpose endpoints
     def set_configuration(self, name, value):
         # All configurations names and values are hendled as strings, so force that
         payload = {str(name): str(value)}
@@ -82,14 +101,16 @@ class sonnenbatterie:
     def get_latest_data(self):
         return self._get(SONNEN_API_PATH_LATEST_DATA)
     
-    def get_current_charge_level(self):
-        return self.get_latest_data().get(SONNEN_LATEST_DATA_CHARGE_LEVEL)
-    
     def get_configurations(self):
         return self._get(SONNEN_API_PATH_CONFIGURATIONS)
     
     def get_configuration(self, name):
         return self._get(SONNEN_API_PATH_CONFIGURATIONS+"/"+name).get(name) 
+    
+
+    # these have special handling in some form, for example converting a mode as a number into a string
+    def get_current_charge_level(self):
+        return self.get_latest_data().get(SONNEN_LATEST_DATA_CHARGE_LEVEL)
 
     def get_operating_mode(self):
         return self.get_configuration(SONNEN_CONFIGURATION_OPERATING_MODE)
@@ -101,7 +122,7 @@ class sonnenbatterie:
     def set_operating_mode(self, operating_mode):
         return self.set_configuration(SONNEN_CONFIGURATION_OPERATING_MODE, operating_mode)
     
-    def set_operaing_mode_by_name(self, operating_mode_name):
+    def set_operating_mode_by_name(self, operating_mode_name):
         return self.set_operating_mode(SONNEN_OPERATING_MODE_NAMES_TO_OPERATING_MODES.get(operating_mode_name))
     
     def get_battery_reserve(self):
