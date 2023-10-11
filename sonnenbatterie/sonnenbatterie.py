@@ -6,7 +6,6 @@ from .const import *
 # pylint: enable=unused-wildcard-import
 from .timeofuse import timeofuseschedule
 
-print("Loading sonnenBatterie")
 class sonnenbatterie:
     def __init__(self,username,password,ipaddress):
         self.username=username
