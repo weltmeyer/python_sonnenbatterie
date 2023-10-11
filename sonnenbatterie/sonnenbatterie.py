@@ -4,7 +4,7 @@ import json
 # pylint: disable=unused-wildcard-import
 from .const import *
 # pylint: enable=unused-wildcard-import
-
+from .timeofuse import timeofuseschedule
 
 class sonnenbatterie:
     def __init__(self,username,password,ipaddress):
@@ -34,6 +34,7 @@ class sonnenbatterie:
         self.token=token
     
     def _get(self,what,isretry=False):
+        # This is a synchronous call, you may need to wrap it in a thread or something for asynchronous operation
         response=requests.get(self.baseurl+what,
             headers={'Auth-Token': self.token},
         )
@@ -46,6 +47,7 @@ class sonnenbatterie:
         return response.json()    
 
     def _put(self, what, payload, isretry=False):
+        # This is a synchronous call, you may need to wrap it in a thread or something for asynchronous operation
         response=requests.put(self.baseurl+what,
             headers={'Auth-Token': self.token,'Content-Type': 'application/json'} , json=payload
         )
@@ -60,6 +62,8 @@ class sonnenbatterie:
     # while I don't have details I belive this is probabaly onlu useful in manual more
     # and it's probabaly possible to extact the actuall flow rate in operation  
     # looking at the status.state_battery_inout value
+    # irritatingly there is no mechanism in the API to do a single set to you have to work out if
+    # the direction of the flow and then call the appropriate API 
     def set_manual_flowrate(self, direction, rate):
         path=self.setpoint+direction+"/"+str(rate)
         response=requests.post(url=path,
@@ -153,14 +157,14 @@ class sonnenbatterie:
     def get_time_of_use_schedule_as_string(self):
         return self.get_configuration(SONNEN_CONFIGURATION_TOU_SCHEDULE)
     
-    def get_time_of_use_schedule_as_objects(self):
+    def get_time_of_use_schedule_as_json_objects(self):
         return json.loads(self.get_configuration(SONNEN_CONFIGURATION_TOU_SCHEDULE))
     
-    # In this case the schedule is a JSON representation of an array of time of use entries (the string versions), each entry has a start time and stop time and a threshold_p_max (max grid power for the entire building including charging)
-    def set_time_of_use_schedule_from_string(self, schedule):
-        return self.set_configuration(SONNEN_CONFIGURATION_TOU_SCHEDULE, schedule)
-   
-    # In this case the schedule is a array representation of an array of disctionary formatted time of use entries, each entry has a start time and stop time and a threshold_p_max (max grid power for the entire building including charging)
-    def set_time_of_use_schedule_from_objects(self, schedule):
+    def get_time_of_use_schedule_as_schedule(self)-> timeofuseschedule:
+        current_schedule = self.get_time_of_use_schedule_as_json_objects() 
+        return timeofuseschedule.build_from_json(current_schedule)
+        
+    # In this case the schedule is a array representation of an array of dictionary formatted time of use entries, each entry has a start time and stop time and a threshold_p_max (max grid power for the entire building including charging)
+    def set_time_of_use_schedule_from_json_objects(self, schedule):
         return self.set_configuration(SONNEN_CONFIGURATION_TOU_SCHEDULE, json.dumps(schedule))
    

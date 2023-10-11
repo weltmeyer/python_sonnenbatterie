@@ -1,5 +1,7 @@
 """Process the time of use schedule stuff"""
 from datetime import time, datetime
+from typing import List
+
 
 ATTR_TOU_START="start"
 ATTR_TOU_STOP="stop"
@@ -9,7 +11,7 @@ TIME_FORMAT="%H:%M"
 MIDNIGHT=time()
 
 class timeofuse:
-    def __init__(self, start_time, stop_time, max_power=20000):
+    def __init__(self, start_time:time, stop_time:time, max_power=20000):
         self.start_time = start_time
         # for comparisson reasons we can't have the stop time be midnight as thaty's actually the earliest possible time
         # so if it is provided as midnight make it the latest possible time
@@ -19,7 +21,7 @@ class timeofuse:
         self.max_power = max_power
 
     def get_as_tou(self):
-        start_string = self.start_time.strftime(TIME_FORMAT)
+        start_string = self.get_start_time_as_string()
         tmp_stop_time = self.stop_time
         # previously we had to munge midnight as an stop time to 23:59:59.999999
         # if that was done now undo it
@@ -29,6 +31,27 @@ class timeofuse:
         stop_string=tmp_stop_time.strftime(TIME_FORMAT)
         max_power_string = str(self.max_power)
         return {ATTR_TOU_START:start_string, ATTR_TOU_STOP:stop_string, ATTR_TOU_MAX_POWER:max_power_string}
+    
+    def get_as_string(self) -> str:
+        resp = "Start "+self.get_start_time_as_string()+", End "+self.get_stop_time_as_string(), "Max allowable power "+str(self.get_max_power())
+        return resp 
+
+    def get_start_time_as_string(self) -> str:
+        return self._get_time_as_string(self.start_time)
+    
+    def get_stop_time_as_string(self) -> str:
+        tmp_stop_time = self.stop_time
+        # previously we had to munge midnight as an stop time to 23:59:59.999999
+        # if that was done now undo it
+        if (tmp_stop_time == time.max):
+            tmp_stop_time = MIDNIGHT
+        return self._get_time_as_string(tmp_stop_time)
+    
+    def _get_time_as_string(self, timeobj:time) -> str:
+        return timeobj.strftime(TIME_FORMAT)
+    
+    def get_max_power(self) -> int:
+        return self.max_power
     
     def from_tou(tou):
         # parse it out
@@ -66,18 +89,19 @@ class timeofuse:
     
 class timeofuseschedule:
     def __init__(self):
-        self.schedule_entries = []
+        self.__schedule_entries = []
 
     # adds the entry ensureing that it does not overlap with an existing entry
     def _add_entry(self, entry):
         if (entry.stop_time < entry.start_time):
             raise Exception("End time cannot be before start time")
-        for i in self.schedule_entries:
+        for i in self.__schedule_entries:
             if (i.is_overlapping(entry)):
                 raise Exception("Unable to add entry, overlaps with exisitngv entry")
-        self.schedule_entries.append(entry)
+        self.__schedule_entries.append(entry)
         # maintains this as a sotred list based on the start time
-        self.schedule_entries = sorted(self.schedule_entries, key=lambda entry: entry.start_time)
+        self.__schedule_entries = sorted(self.__schedule_entries, key=lambda entry: entry.start_time)
+
     # Add an entry, if it spans midnight split it into a before midnight and after midnight section
     # Note that this IS NOT reversed on retrieving the saved entries
     # Note that the change may result in a modified list order, so callers should AWAYS
@@ -96,7 +120,7 @@ class timeofuseschedule:
     # use the returned list or get a new one as that will reflect the current state of
     # afairs
     def delete_entry(self, entry_number):
-        self.schedule_entries.pop(entry_number)
+        self.__schedule_entries.pop(entry_number)
         return self.get_as_tou_schedule()
     # removes and exisitng entry and adds a new one , this is really just a convenience
     # If the new entry is rejected due to overlap then the deleted one IS NOT REPLACED
@@ -104,17 +128,55 @@ class timeofuseschedule:
     # use the returned list or get a new one as that will reflect the current state of
     # afairs
     def remove_and_replace_entry(self, old_entry_nuber, new_entry):
-        self.schedule_entries.pop(old_entry_nuber)
+        self.__schedule_entries.pop(old_entry_nuber)
         return self.add_entry(new_entry)
 
-    def get_as_tou_schedule(self):
+    def get_as_tou_schedule(self)-> List[timeofuse]:
         schedules = []
-        for i in self.schedule_entries :
+        for i in self.__schedule_entries :
             schedules.append(i.get_as_tou())
         return schedules
     
-    def load_tou_schedule(self, schedule):
-        self.schedule_entries = []
-        for entry in schedule:
+    def get_as_string(self) -> str:
+        result = ""
+        doneFirst = False 
+        for entry in self.__schedule_entries :
+            if (doneFirst) :
+                result = result +","
+            else :
+                doneFirst = True 
+            result = result + str(entry.get_as_string())
+        return result 
+    
+    # retained fore compatibility purposed, is not just a wrapper roung  def load_tou_schedule
+    def load_tou_schedule(self, schedcule):
+        self.load_tou_schedule_from_json(schedcule)
+
+    # replace the current tou schedule data with the new dicitonary data
+    def load_tou_schedule_from_json(self, json_schedule):
+        self.__schedule_entries = []
+        for entry in json_schedule:
             tou_entry = timeofuse.from_tou(entry)
             self.add_entry(tou_entry)
+
+    # create a new timeofuseschedule with the provided array ofdictionary data
+    def build_from_json(json_schedule) :
+        tous = timeofuseschedule()
+        for entry in json_schedule:
+            tou_entry = timeofuse.from_tou(entry)
+            tous.add_entry(tou_entry)
+        return tous
+    
+    def entry_count(self) -> int:
+        return len(self.__schedule_entries)
+
+    
+    def get_tou_entry_count(self) -> int:
+        return len(self.__schedule_entries)
+    
+    def get_tou_entry(self, i:int) -> timeofuse:
+        entrties = self.get_tou_entry_count()
+        if (i > entrties):
+            return None
+        else:
+            return self.__schedule_entries[i]
