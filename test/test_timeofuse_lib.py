@@ -28,6 +28,9 @@ if (__name__ == '__main__'):
 
     pprint(tous.get_as_tou_schedule())
 
+    print("Getting as string")
+    print(tous.get_as_string())
+
     print ("\nAdding overlaping start entry")
     tou=timeofuse.create_time_of_use_entry(9,0,10,30)
     try:

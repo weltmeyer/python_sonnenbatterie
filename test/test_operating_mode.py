@@ -33,7 +33,7 @@ if (__name__ == '__main__'):
   print("\nReset Operating mode (name)")
   pprint(sb.get_operating_mode_name())
   print("Setting operating mode name to "+SONNEN_OPERATING_MODE_AUTOMATIC_SELF_CONSUMPTION_NAME)
-  pprint(sb.set_operaing_mode_by_name(SONNEN_OPERATING_MODE_AUTOMATIC_SELF_CONSUMPTION_NAME))
+  pprint(sb.set_operating_mode_by_name(SONNEN_OPERATING_MODE_AUTOMATIC_SELF_CONSUMPTION_NAME))
   print("\nNew Operating mode (num)")
   pprint(sb.get_operating_mode())
   print("\nNew Operating mode (name)")
