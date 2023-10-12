@@ -12,7 +12,7 @@ class sonnenbatterie:
         self.password=password
         self.ipaddress=ipaddress
         self.baseurl='http://'+self.ipaddress+'/api/'
-        self.setpoint=self.baseurl+'v2/setpoint/'
+        self.setpoint='v2/setpoint/'
         self._login()
 
 
@@ -34,8 +34,9 @@ class sonnenbatterie:
         self.token=token
     
     def _get(self,what,isretry=False):
-        # This is a synchronous call, you may need to wrap it in a thread or something for asynchronous operation
-        response=requests.get(self.baseurl+what,
+        # This is a synchronous call, you may need to wrap it in a thread or something for asynchronous operation        
+        url = self.baseurl+what
+        response=requests.get(url,
             headers={'Auth-Token': self.token}, timeout=REQUEST_TIMEOUT
         )
         if not isretry and response.status_code==401:
@@ -48,7 +49,8 @@ class sonnenbatterie:
 
     def _put(self, what, payload, isretry=False):
         # This is a synchronous call, you may need to wrap it in a thread or something for asynchronous operation
-        response=requests.put(self.baseurl+what,
+        url = self.baseurl+what
+        response=requests.put(url,
             headers={'Auth-Token': self.token,'Content-Type': 'application/json'} , json=payload, timeout=REQUEST_TIMEOUT
         )
         if not isretry and response.status_code==401:
@@ -58,6 +60,20 @@ class sonnenbatterie:
             response.raise_for_status()
         return response.json()
 
+    def _post(self, what, isretry=False):
+        # This is a synchronous call, you may need to wrap it in a thread or something for asynchronous operation
+        url = self.baseurl+what
+        print("Posting "+url)
+        response=requests.post(url,
+            headers={'Auth-Token': self.token,'Content-Type': 'application/json'}, timeout=REQUEST_TIMEOUT
+        )
+        if not isretry and response.status_code==401:
+            self._login()
+            return self._post(what, True)
+        if response.status_code != 200:
+            response.raise_for_status()
+        return response.json()
+    
     # these are special purpose endpoints, there is no associated data that I'm aware of
     # while I don't have details I belive this is probabaly only useful in manual more
     # and it's probabaly possible to extact the actuall flow rate in operation  
@@ -66,12 +82,7 @@ class sonnenbatterie:
     # the direction of the flow and then call the appropriate API 
     def set_manual_flowrate(self, direction, rate, isretry=False):
         path=self.setpoint+direction+"/"+str(rate)
-        response=requests.post(url=path,
-            headers={'Auth-Token': self.token,'Content-Type': 'application/json'}, timeout=REQUEST_TIMEOUT
-        )
-        if not isretry and response.status_code==401:
-            self._login()
-            return self.set_manual_flowrate(direction, rate,True)
+        response = self._post(path)
         return (response.status_code == 201)
     
     def set_discharge(self, rate):
