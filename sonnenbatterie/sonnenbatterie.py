@@ -53,7 +53,7 @@ class sonnenbatterie:
         )
         if not isretry and response.status_code==401:
             self._login()
-            return self._get(what,True)
+            return self._put(what, payload,True)
         if response.status_code != 200:
             response.raise_for_status()
         return response.json()
@@ -64,11 +64,14 @@ class sonnenbatterie:
     # looking at the status.state_battery_inout value
     # irritatingly there is no mechanism in the API to do a single set to you have to work out if
     # the direction of the flow and then call the appropriate API 
-    def set_manual_flowrate(self, direction, rate):
+    def set_manual_flowrate(self, direction, rate, isretry=False):
         path=self.setpoint+direction+"/"+str(rate)
         response=requests.post(url=path,
             headers={'Auth-Token': self.token,'Content-Type': 'application/json'}, timeout=REQUEST_TIMEOUT
         )
+        if not isretry and response.status_code==401:
+            self._login()
+            return self.set_manual_flowrate(direction, rate,True)
         return (response.status_code == 201)
     
     def set_discharge(self, rate):
