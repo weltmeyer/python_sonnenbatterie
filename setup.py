@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="sonnenbatterie", # Replace with your own username
-    version="0.2.4",
+    version="0.2.5",
     author="Jan Weltmeyer",
     author_email="author@example.com",
     description="Access Sonnenbatterie REST API",
