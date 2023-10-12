@@ -18,7 +18,7 @@ class sonnenbatterie:
 
     def _login(self):
         password_sha512 = hashlib.sha512(self.password.encode('utf-8')).hexdigest()
-        req_challenge=requests.get(self.baseurl+'challenge', timeout=REQUEST_TIMEOUT)
+        req_challenge=requests.get(self.baseurl+'challenge', timeout=BATTERY_LOGIN_TIMEOUT)
         req_challenge.raise_for_status()
         challenge=req_challenge.json()
         response=hashlib.pbkdf2_hmac('sha512',password_sha512.encode('utf-8'),challenge.encode('utf-8'),7500,64).hex()
@@ -26,7 +26,7 @@ class sonnenbatterie:
         #print(password_sha512)
         #print(challenge)
         #print(response)
-        getsession=requests.post(self.baseurl+'session',{"user":self.username,"challenge":challenge,"response":response}, timeout=REQUEST_TIMEOUT)
+        getsession=requests.post(self.baseurl+'session',{"user":self.username,"challenge":challenge,"response":response}, timeout=BATTERY_LOGIN_TIMEOUT)
         getsession.raise_for_status()
         #print(getsession.text)
         token=getsession.json()['authentication_token']
