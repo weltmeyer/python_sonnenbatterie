@@ -12,13 +12,13 @@ class sonnenbatterie:
         self.password=password
         self.ipaddress=ipaddress
         self.baseurl='http://'+self.ipaddress+'/api/'
-        self.setpoint=self.baseurl+'v2/setpoint/'
+        self.setpoint='v2/setpoint/'
         self._login()
 
 
     def _login(self):
         password_sha512 = hashlib.sha512(self.password.encode('utf-8')).hexdigest()
-        req_challenge=requests.get(self.baseurl+'challenge')
+        req_challenge=requests.get(self.baseurl+'challenge', timeout=BATTERY_LOGIN_TIMEOUT)
         req_challenge.raise_for_status()
         challenge=req_challenge.json()
         response=hashlib.pbkdf2_hmac('sha512',password_sha512.encode('utf-8'),challenge.encode('utf-8'),7500,64).hex()
@@ -26,7 +26,7 @@ class sonnenbatterie:
         #print(password_sha512)
         #print(challenge)
         #print(response)
-        getsession=requests.post(self.baseurl+'session',{"user":self.username,"challenge":challenge,"response":response})
+        getsession=requests.post(self.baseurl+'session',{"user":self.username,"challenge":challenge,"response":response}, timeout=BATTERY_LOGIN_TIMEOUT)
         getsession.raise_for_status()
         #print(getsession.text)
         token=getsession.json()['authentication_token']
@@ -34,9 +34,10 @@ class sonnenbatterie:
         self.token=token
     
     def _get(self,what,isretry=False):
-        # This is a synchronous call, you may need to wrap it in a thread or something for asynchronous operation
-        response=requests.get(self.baseurl+what,
-            headers={'Auth-Token': self.token},
+        # This is a synchronous call, you may need to wrap it in a thread or something for asynchronous operation        
+        url = self.baseurl+what
+        response=requests.get(url,
+            headers={'Auth-Token': self.token}, timeout=REQUEST_TIMEOUT
         )
         if not isretry and response.status_code==401:
             self._login()
@@ -48,27 +49,40 @@ class sonnenbatterie:
 
     def _put(self, what, payload, isretry=False):
         # This is a synchronous call, you may need to wrap it in a thread or something for asynchronous operation
-        response=requests.put(self.baseurl+what,
-            headers={'Auth-Token': self.token,'Content-Type': 'application/json'} , json=payload
+        url = self.baseurl+what
+        response=requests.put(url,
+            headers={'Auth-Token': self.token,'Content-Type': 'application/json'} , json=payload, timeout=REQUEST_TIMEOUT
         )
         if not isretry and response.status_code==401:
             self._login()
-            return self._get(what,True)
+            return self._put(what, payload,True)
         if response.status_code != 200:
             response.raise_for_status()
         return response.json()
 
+    def _post(self, what, isretry=False):
+        # This is a synchronous call, you may need to wrap it in a thread or something for asynchronous operation
+        url = self.baseurl+what
+        print("Posting "+url)
+        response=requests.post(url,
+            headers={'Auth-Token': self.token,'Content-Type': 'application/json'}, timeout=REQUEST_TIMEOUT
+        )
+        if not isretry and response.status_code==401:
+            self._login()
+            return self._post(what, True)
+        if response.status_code != 200:
+            response.raise_for_status()
+        return response.json()
+    
     # these are special purpose endpoints, there is no associated data that I'm aware of
-    # while I don't have details I belive this is probabaly onlu useful in manual more
+    # while I don't have details I belive this is probabaly only useful in manual more
     # and it's probabaly possible to extact the actuall flow rate in operation  
     # looking at the status.state_battery_inout value
     # irritatingly there is no mechanism in the API to do a single set to you have to work out if
     # the direction of the flow and then call the appropriate API 
-    def set_manual_flowrate(self, direction, rate):
+    def set_manual_flowrate(self, direction, rate, isretry=False):
         path=self.setpoint+direction+"/"+str(rate)
-        response=requests.post(url=path,
-            headers={'Auth-Token': self.token,'Content-Type': 'application/json'}
-        )
+        response = self._post(path)
         return (response.status_code == 201)
     
     def set_discharge(self, rate):

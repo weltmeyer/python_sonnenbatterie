@@ -16,7 +16,7 @@ if (__name__ == '__main__'):
   current_flow = sb.get_status()["Pac_total_W"]
   print("current total flow is "+str(current_flow))
   print("Setting operating mode name to "+SONNEN_OPERATING_MODE_MANUAL_NAME)
-  pprint(sb.set_operaing_mode_by_name(SONNEN_OPERATING_MODE_MANUAL_NAME))
+  pprint(sb.set_operating_mode_by_name(SONNEN_OPERATING_MODE_MANUAL_NAME))
   e = threading.Event() 
   print("Waiting 15 for things to settlt down")
   e.wait(15)
@@ -39,5 +39,5 @@ if (__name__ == '__main__'):
   manual_flow=sb.get_status()["Pac_total_W"]
   print("Flow with discharge rate of 100 is"+str(manual_flow))
   print("Returning operating mode to origional mode of "+operating_mode_name)
-  pprint(sb.set_operaing_mode_by_name(operating_mode_name))
+  pprint(sb.set_operating_mode_by_name(operating_mode_name))
 
