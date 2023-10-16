@@ -13,12 +13,17 @@ class sonnenbatterie:
         self.ipaddress=ipaddress
         self.baseurl='http://'+self.ipaddress+'/api/'
         self.setpoint='v2/setpoint/'
+        self._batteryLoginTimeout = BATTERY_LOGIN_TIMEOUT 
+        self._batteryConnectTimeout = CONNECT_TO_BATTERY_TIMEOUT 
+        self._batteryReadTimeout = READ_FROM_BATTERY_TIMEOUT 
+        self._batteryRequestTimeout = (self._batteryConnectTimeout, self._batteryReadTimeout)
+
         self._login()
 
 
     def _login(self):
         password_sha512 = hashlib.sha512(self.password.encode('utf-8')).hexdigest()
-        req_challenge=requests.get(self.baseurl+'challenge', timeout=BATTERY_LOGIN_TIMEOUT)
+        req_challenge=requests.get(self.baseurl+'challenge', timeout=self._batteryLoginTimeout)
         req_challenge.raise_for_status()
         challenge=req_challenge.json()
         response=hashlib.pbkdf2_hmac('sha512',password_sha512.encode('utf-8'),challenge.encode('utf-8'),7500,64).hex()
@@ -26,18 +31,38 @@ class sonnenbatterie:
         #print(password_sha512)
         #print(challenge)
         #print(response)
-        getsession=requests.post(self.baseurl+'session',{"user":self.username,"challenge":challenge,"response":response}, timeout=BATTERY_LOGIN_TIMEOUT)
+        getsession=requests.post(self.baseurl+'session',{"user":self.username,"challenge":challenge,"response":response}, timeout=self._batteryLoginTimeout)
         getsession.raise_for_status()
         #print(getsession.text)
         token=getsession.json()['authentication_token']
         #print(token)
         self.token=token
+
+    def set_login_timeout(self, timeout:int = 120):
+        self._batteryLoginTimeout = timeout
+    
+    def get_login_timeout(self) -> int:
+        return self._batteryLoginTimeout
+    
+    def set_request_connect_timeout(self, timeout:int = 60):
+        self._batteryConnectTimeout = timeout
+        self._batteryRequestTimeout = (self._batteryConnectTimeout, self._batteryReadTimeout)
+
+    def get_request_connect_timeout(self) -> int:
+        return self._batteryConnectTimeout
+    
+    def set_request_read_timeout(self, timeout:int = 60):
+        self._batteryReadTimeout = timeout
+        self._batteryRequestTimeout = (self._batteryConnectTimeout, self._batteryReadTimeout)
+
+    def get_request_read_timeout(self) -> int:
+        return self._batteryReadTimeout
     
     def _get(self,what,isretry=False):
         # This is a synchronous call, you may need to wrap it in a thread or something for asynchronous operation        
         url = self.baseurl+what
         response=requests.get(url,
-            headers={'Auth-Token': self.token}, timeout=REQUEST_TIMEOUT
+            headers={'Auth-Token': self.token}, timeout=self._batteryRequestTimeout
         )
         if not isretry and response.status_code==401:
             self._login()
@@ -51,7 +76,7 @@ class sonnenbatterie:
         # This is a synchronous call, you may need to wrap it in a thread or something for asynchronous operation
         url = self.baseurl+what
         response=requests.put(url,
-            headers={'Auth-Token': self.token,'Content-Type': 'application/json'} , json=payload, timeout=REQUEST_TIMEOUT
+            headers={'Auth-Token': self.token,'Content-Type': 'application/json'} , json=payload, timeout=self._batteryRequestTimeout
         )
         if not isretry and response.status_code==401:
             self._login()
@@ -65,7 +90,7 @@ class sonnenbatterie:
         url = self.baseurl+what
         print("Posting "+url)
         response=requests.post(url,
-            headers={'Auth-Token': self.token,'Content-Type': 'application/json'}, timeout=REQUEST_TIMEOUT
+            headers={'Auth-Token': self.token,'Content-Type': 'application/json'}, timeout=self._batteryRequestTimeout
         )
         if not isretry and response.status_code==401:
             self._login()
@@ -182,3 +207,4 @@ class sonnenbatterie:
     def set_time_of_use_schedule_from_json_objects(self, schedule):
         return self.set_configuration(SONNEN_CONFIGURATION_TOU_SCHEDULE, json.dumps(schedule))
    
+
