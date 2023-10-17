@@ -1,0 +1,3 @@
+Origional code by Jan Weltmeyer
+Timeout support added by Tim Graves
+Updates to support interacting with the battery (updating operating mode, time of use schedule, battery reserve, flow rate) by Tim Graves
