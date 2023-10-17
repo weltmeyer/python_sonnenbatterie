@@ -13,9 +13,9 @@ class sonnenbatterie:
         self.ipaddress=ipaddress
         self.baseurl='http://'+self.ipaddress+'/api/'
         self.setpoint='v2/setpoint/'
-        self._batteryLoginTimeout = BATTERY_LOGIN_TIMEOUT 
-        self._batteryConnectTimeout = CONNECT_TO_BATTERY_TIMEOUT 
-        self._batteryReadTimeout = READ_FROM_BATTERY_TIMEOUT 
+        self._batteryLoginTimeout = DEFAULT_BATTERY_LOGIN_TIMEOUT 
+        self._batteryConnectTimeout = DEFAULT_CONNECT_TO_BATTERY_TIMEOUT 
+        self._batteryReadTimeout = DEFAULT_READ_FROM_BATTERY_TIMEOUT 
         self._batteryRequestTimeout = (self._batteryConnectTimeout, self._batteryReadTimeout)
 
         self._login()
@@ -97,7 +97,7 @@ class sonnenbatterie:
             return self._post(what, True)
         if response.status_code != 200:
             response.raise_for_status()
-        return response.json()
+        return response
     
     # these are special purpose endpoints, there is no associated data that I'm aware of
     # while I don't have details I belive this is probabaly only useful in manual more
