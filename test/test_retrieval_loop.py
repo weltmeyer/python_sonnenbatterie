@@ -8,10 +8,10 @@ import traceback
 import time
 from login import *
 from pprint import pprint
-from sonnenbatterie.sonnenbatterie import sonnenbatterie
 script_path = os.path.realpath(os.path.dirname(__name__))
 os.chdir(script_path)
 sys.path.append("..")
+from sonnenbatterie.sonnenbatterie import sonnenbatterie
 if (__name__ == '__main__'):
     print("Starting login")
     try:
@@ -23,7 +23,8 @@ if (__name__ == '__main__'):
         print("non timeout exception getting connection"+str(type(e))+", details "+str(e)) 
         exit()
     print("Logged in")
-
+    sb.set_request_connect_timeout(30)
+    sb.set_request_read_timeout(30)
     counter = 0
     while (True) :
         counter = counter + 1
