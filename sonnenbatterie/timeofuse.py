@@ -20,6 +20,14 @@ class timeofuse:
         self.stop_time = stop_time
         self.max_power = max_power
 
+    def __eq__(self, other) -> bool :
+        if not isinstance(other, type(self)):
+            return False
+        return (self.start_time == other.start_time) and (self.stop_time == other.stop_time) and (self.max_power == other.max_power) 
+
+    def __hash__(self) -> int:
+        return hash(self.start_time) ^ hash(self.stop_time) ^ hash(self.max_power)
+
     def get_as_tou(self):
         start_string = self.get_start_time_as_string()
         tmp_stop_time = self.stop_time
@@ -89,18 +97,18 @@ class timeofuse:
     
 class timeofuseschedule:
     def __init__(self):
-        self.__schedule_entries = []
+        self._schedule_entries = []
 
     # adds the entry ensureing that it does not overlap with an existing entry
     def _add_entry(self, entry):
         if (entry.stop_time < entry.start_time):
             raise Exception("End time cannot be before start time")
-        for i in self.__schedule_entries:
+        for i in self._schedule_entries:
             if (i.is_overlapping(entry)):
                 raise Exception("Unable to add entry, overlaps with exisitngv entry")
-        self.__schedule_entries.append(entry)
-        # maintains this as a sotred list based on the start time
-        self.__schedule_entries = sorted(self.__schedule_entries, key=lambda entry: entry.start_time)
+        self._schedule_entries.append(entry)
+        # maintains this as a sotred list based on the start time, this lets us compare properly
+        self._schedule_entries = sorted(self._schedule_entries, key=lambda entry: entry.start_time)
 
     # Add an entry, if it spans midnight split it into a before midnight and after midnight section
     # Note that this IS NOT reversed on retrieving the saved entries
@@ -120,7 +128,7 @@ class timeofuseschedule:
     # use the returned list or get a new one as that will reflect the current state of
     # afairs
     def delete_entry(self, entry_number):
-        self.__schedule_entries.pop(entry_number)
+        self._schedule_entries.pop(entry_number)
         return self.get_as_tou_schedule()
     # removes and exisitng entry and adds a new one , this is really just a convenience
     # If the new entry is rejected due to overlap then the deleted one IS NOT REPLACED
@@ -128,19 +136,19 @@ class timeofuseschedule:
     # use the returned list or get a new one as that will reflect the current state of
     # afairs
     def remove_and_replace_entry(self, old_entry_nuber, new_entry):
-        self.__schedule_entries.pop(old_entry_nuber)
+        self._schedule_entries.pop(old_entry_nuber)
         return self.add_entry(new_entry)
 
     def get_as_tou_schedule(self)-> List[timeofuse]:
         schedules = []
-        for i in self.__schedule_entries :
+        for i in self._schedule_entries :
             schedules.append(i.get_as_tou())
         return schedules
     
     def get_as_string(self) -> str:
         result = ""
         doneFirst = False 
-        for entry in self.__schedule_entries :
+        for entry in self._schedule_entries :
             if (doneFirst) :
                 result = result +","
             else :
@@ -154,7 +162,7 @@ class timeofuseschedule:
 
     # replace the current tou schedule data with the new dicitonary data
     def load_tou_schedule_from_json(self, json_schedule):
-        self.__schedule_entries = []
+        self._schedule_entries = []
         for entry in json_schedule:
             tou_entry = timeofuse.from_tou(entry)
             self.add_entry(tou_entry)
@@ -168,15 +176,45 @@ class timeofuseschedule:
         return tous
     
     def entry_count(self) -> int:
-        return len(self.__schedule_entries)
+        return len(self._schedule_entries)
 
     
     def get_tou_entry_count(self) -> int:
-        return len(self.__schedule_entries)
+        return len(self._schedule_entries)
     
     def get_tou_entry(self, i:int) -> timeofuse:
         entrties = self.get_tou_entry_count()
         if (i > entrties):
             return None
         else:
-            return self.__schedule_entries[i]
+            return self._schedule_entries[i]
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, type(self)):
+            return False
+        myEntryCount = self.entry_count() 
+        otherEntryCount = other.entry_count()
+        # if there both zero length by definition they are equal
+        if (myEntryCount == 0) and (otherEntryCount==0):
+            return True
+        # different numbers of entries means different scheduled
+        if (myEntryCount != otherEntryCount):
+            return False
+        # for each entry
+        for i in range(0, myEntryCount):
+            myTou = self.get_tou_entry(i)
+            otherTou = other.get_tou_entry(i)
+            if (myTou != otherTou):
+                return False
+        # got to the end of the individual timeofuse entries and they arew all equal so ...
+        return True
+    
+    def __hash__(self) -> int:
+        myHash = 0
+        myEntryCount = self.entry_count() 
+        for i in range(0, myEntryCount):
+            myTou = self.get_tou_entry(i)
+            myTouHash = hash(myTou) 
+            # adjust the hash based on the position in the order to allow for things in a differing order
+            myHash = myHash ^ (myTouHash + i)
+        return myHash
