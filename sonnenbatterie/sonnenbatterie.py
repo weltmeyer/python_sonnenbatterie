@@ -1,10 +1,11 @@
-import requests
+import sys
+sys.path.append("..")
 import hashlib
-import json
-# pylint: disable=unused-wildcard-import
+import requests
+
+from sonnenbatterie2 import SonnenBatterieV2
 from .const import *
-# pylint: enable=unused-wildcard-import
-from .timeofuse import timeofuseschedule
+
 
 class sonnenbatterie:
     def __init__(self,username,password,ipaddress):
@@ -19,6 +20,8 @@ class sonnenbatterie:
         self._batteryRequestTimeout = (self._batteryConnectTimeout, self._batteryReadTimeout)
 
         self._login()
+
+        self.sb2 = SonnenBatterieV2(ip_address=self.ipaddress, api_token=self.token)
 
 
     def _login(self):
@@ -105,24 +108,9 @@ class sonnenbatterie:
     # looking at the status.state_battery_inout value
     # irritatingly there is no mechanism in the API to do a single set to you have to work out if
     # the direction of the flow and then call the appropriate API 
-    def set_manual_flowrate(self, direction, rate, isretry=False):
-        path=self.setpoint+direction+"/"+str(rate)
-        response = self._post(path)
-        return (response.status_code == 201)
-    
-    def set_discharge(self, rate):
-        return self.set_manual_flowrate(SONNEN_DISCHARGE_PATH, rate)
-    
-
-    def set_charge(self, rate):
-        return self.set_manual_flowrate(SONNEN_CHARGE_PATH, rate)
-
     # more general purpose endpoints
-    def set_configuration(self, name, value):
-        # All configurations names and values are hendled as strings, so force that
-        payload = {str(name): str(value)}
-        return self._put(SONNEN_API_PATH_CONFIGURATIONS, payload)
 
+    # API v1 calls
     def get_powermeter(self):
         return self._get(SONNEN_API_PATH_POWER_METER)
         
@@ -140,15 +128,19 @@ class sonnenbatterie:
         
     def get_battery(self):
         return self._get(SONNEN_API_PATH_BATTERY)
-        
+
+    # API v2 calls
+    def set_configuration(self, name, value):
+        return self.sb2.set_config_item(name, value)
+
     def get_latest_data(self):
-        return self._get(SONNEN_API_PATH_LATEST_DATA)
-    
+        return self.sb2.get_latest_data()
+
     def get_configurations(self):
-        return self._get(SONNEN_API_PATH_CONFIGURATIONS)
+        return self.sb2.get_configurations()
     
     def get_configuration(self, name):
-        return self._get(SONNEN_API_PATH_CONFIGURATIONS+"/"+name).get(name) 
+        return self.sb2.get_config_item(name)
     
 
     # these have special handling in some form, for example converting a mode as a number into a string
@@ -159,8 +151,8 @@ class sonnenbatterie:
         return self.get_configuration(SONNEN_CONFIGURATION_OPERATING_MODE)
     
     def get_operating_mode_name(self):
-        operating_mode_num = self.get_operating_mode()
-        return SONNEN_OPERATING_MODES_TO_OPERATING_MODE_NAMES.get(operating_mode_num)
+        operating_mode = self.get_operating_mode()
+        return SONNEN_OPERATING_MODES_TO_OPERATING_MODE_NAMES.get(operating_mode[SONNEN_CONFIGURATION_OPERATING_MODE])
     
     def set_operating_mode(self, operating_mode):
         return self.set_configuration(SONNEN_CONFIGURATION_OPERATING_MODE, operating_mode)
@@ -174,7 +166,7 @@ class sonnenbatterie:
     def set_battery_reserve(self, reserve=5):
         reserve = int(reserve)
         if (reserve < 0) or (reserve > 100):
-            raise Exception("Reserve must be between 0 and 100, you specified "+reserve)
+            raise Exception(f"Reserve must be between 0 and 100, you specified {reserve}")
         return self.set_configuration(SONNEN_CONFIGURATION_BACKUP_RESERVE, reserve)
     
     # set the reserve to the current battery level adjusted by the offset if provided
@@ -182,29 +174,13 @@ class sonnenbatterie:
     # a negative offser means less than the current level)
     # If the new reserve is less than the minimum reserve then use the minimum reserve
     # the reserve will be tested to ensure it's >= 0 or <= 100
-    def set_battery_reserve_relative_to_currentCharge(self, offset=0, minimum_reserve=0):
+    def set_battery_reserve_relative_to_current_charge(self, offset=0, minimum_reserve=0):
         current_level = self.get_current_charge_level()
         target_level = current_level +offset
-        if (target_level <  minimum_reserve):
+        if target_level <  minimum_reserve:
             target_level = minimum_reserve
-        if (target_level < 0) :
+        if target_level < 0:
             target_level = 0
-        elif (target_level > 100):
+        elif target_level > 100:
             target_level = 100
         return self.set_battery_reserve(target_level)
-        
-    def get_time_of_use_schedule_as_string(self):
-        return self.get_configuration(SONNEN_CONFIGURATION_TOU_SCHEDULE)
-    
-    def get_time_of_use_schedule_as_json_objects(self):
-        return json.loads(self.get_configuration(SONNEN_CONFIGURATION_TOU_SCHEDULE))
-    
-    def get_time_of_use_schedule_as_schedule(self)-> timeofuseschedule:
-        current_schedule = self.get_time_of_use_schedule_as_json_objects() 
-        return timeofuseschedule.build_from_json(current_schedule)
-        
-    # In this case the schedule is a array representation of an array of dictionary formatted time of use entries, each entry has a start time and stop time and a threshold_p_max (max grid power for the entire building including charging)
-    def set_time_of_use_schedule_from_json_objects(self, schedule):
-        return self.set_configuration(SONNEN_CONFIGURATION_TOU_SCHEDULE, json.dumps(schedule))
-   
-

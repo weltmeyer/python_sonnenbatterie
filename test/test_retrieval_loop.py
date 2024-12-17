@@ -3,16 +3,17 @@
 # To me having to do this for testing seems a horrendous hack
 import os
 import sys
-import requests
-import traceback
 import time
+
+import requests
+
 from login import *
-from pprint import pprint
+
 script_path = os.path.realpath(os.path.dirname(__name__))
 os.chdir(script_path)
 sys.path.append("..")
 from sonnenbatterie.sonnenbatterie import sonnenbatterie
-if (__name__ == '__main__'):
+if __name__ == '__main__':
     print("Starting login")
     try:
         sb = sonnenbatterie(SONNEN_USERNAME, SONNEN_PASSWORD, SONNEN_IP)
@@ -26,7 +27,7 @@ if (__name__ == '__main__'):
     sb.set_request_connect_timeout(30)
     sb.set_request_read_timeout(30)
     counter = 0
-    while (True) :
+    while True:
         counter = counter + 1
         reserve = -1
         current_level = -1
@@ -41,7 +42,7 @@ if (__name__ == '__main__'):
             print("non timeout exception getting reserve "+str(type(e))+", details "+str(e)) 
         
         try:
-            tou = sb.get_time_of_use_schedule_as_string()
+            tou = sb.sb2.get_tou_schedule_string()
         except requests.exceptions.Timeout as e:
             print("Timeout getting tou "+str(type(e))+", details "+str(e))    
         except Exception as e:
