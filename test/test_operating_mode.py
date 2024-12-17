@@ -9,14 +9,13 @@ from login import *
 from pprint import pprint
 from sonnenbatterie.sonnenbatterie import sonnenbatterie
 from sonnenbatterie.const import *
-if (__name__ == '__main__'):
+if __name__ == '__main__':
   sb = sonnenbatterie(SONNEN_USERNAME, SONNEN_PASSWORD, SONNEN_IP)
   operating_mode_num = sb.get_operating_mode()
   operating_mode_name = sb.get_operating_mode_name()
   print("\nConfigurations")
   pprint(sb.get_configurations())
   print("\nOperating mode (num)")
-  operating_mode_num = sb.get_operating_mode()
   pprint(sb.get_operating_mode())
   print("\nOperating mode (name)")
   pprint(sb.get_operating_mode_name())

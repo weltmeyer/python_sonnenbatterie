@@ -10,7 +10,7 @@ from login import *
 from pprint import pprint
 from sonnenbatterie.sonnenbatterie import sonnenbatterie
 from sonnenbatterie.const import *
-if (__name__ == '__main__'):
+if __name__ == '__main__':
   sb = sonnenbatterie(SONNEN_USERNAME, SONNEN_PASSWORD, SONNEN_IP)
   operating_mode_name = sb.get_operating_mode_name()
   current_flow = sb.get_status()["Pac_total_W"]
@@ -24,7 +24,7 @@ if (__name__ == '__main__'):
   print("Flow on manual is"+str(manual_flow))
   print("Setting a charge rate of 100") 
   # set to a charge rate of 100
-  set_resp = sb.set_charge(100)
+  set_resp = sb.sb2.charge_battery(100)
   print("response to set charge is "+str(set_resp))
   print("Waiting 15 for things to settle down")
   e.wait(15)
@@ -32,7 +32,7 @@ if (__name__ == '__main__'):
   print("Flow with charge rate of 100 is"+str(manual_flow))
   print("Setting a discharge rate of 100") 
   # set to a charge rate of 100
-  set_resp = sb.set_discharge(100)
+  set_resp = sb.sb2.discharge_battery(100)
   print("response to set discharge is "+str(set_resp))
   print("Waiting 15 for things to settle down")
   e.wait(15)
