@@ -8,11 +8,11 @@ os.chdir(script_path)
 sys.path.append("..")
 from login import *
 from pprint import pprint
-from sonnenbatterie.sonnenbatterie import sonnenbatterie
+from sonnenbatterie2.sonnenbatterie2 import SonnenBatterieV2
 from const import *
 
 def main():
-  sb = sonnenbatterie(SONNEN_USERNAME, SONNEN_PASSWORD, SONNEN_IP)
+  sb = SonnenBatterieV2(SONNEN_IP, SONNEN_TOKEN)
   operating_mode_num = sb.get_operating_mode()
   operating_mode_name = sb.get_operating_mode_name()
   print("\nConfigurations")

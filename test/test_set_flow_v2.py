@@ -8,11 +8,11 @@ os.chdir(script_path)
 sys.path.append("..")
 from login import *
 from pprint import pprint
-from sonnenbatterie.sonnenbatterie import sonnenbatterie
+from sonnenbatterie2.sonnenbatterie2 import SonnenBatterieV2
 from const import *
 
 def test_set_flow():
-  sb = sonnenbatterie(SONNEN_USERNAME, SONNEN_PASSWORD, SONNEN_IP)
+  sb = SonnenBatterieV2(SONNEN_IP, SONNEN_TOKEN)
   operating_mode_name = sb.get_operating_mode_name()
   current_flow = sb.get_status()["Pac_total_W"]
   print(f"current total flow is {current_flow}")
@@ -25,7 +25,7 @@ def test_set_flow():
   print(f"Flow on manual is {manual_flow}")
   print("Setting a charge rate of 100") 
   # set to a charge rate of 100
-  set_resp = sb.sb2.charge_battery(100)
+  set_resp = sb.charge_battery(100)
   print(f"response to set charge is {set_resp}")
   print("Waiting 5 seconds for things to settle down")
   e.wait(5)
@@ -33,7 +33,7 @@ def test_set_flow():
   print(f"Flow with charge rate of 100 is {manual_flow}")
   print("Setting a discharge rate of 100") 
   # set to a charge rate of 100
-  set_resp = sb.sb2.discharge_battery(100)
+  set_resp = sb.discharge_battery(100)
   print(f"response to set discharge is {set_resp}")
   print("Waiting 5 for things to settle down")
   e.wait(5)

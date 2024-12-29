@@ -71,16 +71,16 @@ if __name__ == '__main__':
         print ("\nExpected exception message "+str(e.args))
     pprint(tous.get_as_tou_schedule())
 
-    print ("\nAdding exacty match overlaping entry")
+    print ("\nAdding exact match overlaping entry")
     tou=create_time_of_use_entry(10,0,11,0)
     try:
         tous.add_entry(tou)
-        print ("\nOpps, no exception, tnis is a bug")
+        print ("\nOpps, no exception, this is a bug")
     except Exception as e:
         print ("\nExpected exception message "+str(e.args))
     pprint(tous.get_as_tou_schedule())
 
-    print ("\Building based on returned entry")
+    print ("\nBuilding based on returned entry")
     old_schedule = tous.get_as_tou_schedule()
     tous = TimeofUseSchedule() 
     tous.load_tou_schedule(old_schedule)

@@ -13,7 +13,8 @@ script_path = os.path.realpath(os.path.dirname(__name__))
 os.chdir(script_path)
 sys.path.append("..")
 from sonnenbatterie.sonnenbatterie import sonnenbatterie
-if __name__ == '__main__':
+
+def main():
     print("Starting login")
     try:
         sb = sonnenbatterie(SONNEN_USERNAME, SONNEN_PASSWORD, SONNEN_IP)
@@ -27,7 +28,7 @@ if __name__ == '__main__':
     sb.set_request_connect_timeout(30)
     sb.set_request_read_timeout(30)
     counter = 0
-    while True:
+    while True and counter < 5:
         counter = counter + 1
         reserve = -1
         current_level = -1
@@ -65,3 +66,6 @@ if __name__ == '__main__':
 
         print("Loop "+str(counter)+", retrireved data : current_level "+str(current_level)+", reserve "+str(reserve)+", mode "+mode+", tou "+tou)
         time.sleep(15)
+
+if __name__ == '__main__':
+    main()

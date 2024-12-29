@@ -1,1 +1,1 @@
-from .sonnenbatterie import sonnenbatterie
+from .sonnenbatterie import sonnenbatterie, AsyncSonnenBatterie

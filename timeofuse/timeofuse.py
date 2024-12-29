@@ -116,7 +116,7 @@ class TimeofUseSchedule:
             raise Exception("End time cannot be before start time")
         for i in self._schedule_entries:
             if i.is_overlapping(entry):
-                raise Exception("Unable to add entry, overlaps with exisitngv entry")
+                raise Exception("Unable to add entry, overlaps with exisiting entry")
         self._schedule_entries.append(entry)
         # maintains this as a sotred list based on the start time, this lets us compare properly
         self._schedule_entries = sorted(self._schedule_entries, key=lambda l_entry: l_entry.start_time)
