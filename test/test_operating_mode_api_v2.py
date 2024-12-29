@@ -9,7 +9,7 @@ sys.path.append("..")
 from login import *
 from pprint import pprint
 from sonnenbatterie2.sonnenbatterie2 import SonnenBatterieV2
-from const import *
+from sonnenbatterie2.const import *
 
 def main():
   sb = SonnenBatterieV2(SONNEN_IP, SONNEN_TOKEN)

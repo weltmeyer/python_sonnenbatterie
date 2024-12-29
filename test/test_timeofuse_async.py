@@ -14,7 +14,7 @@ from pprint import pprint
 from sonnenbatterie import AsyncSonnenBatterie
 from timeofuse import TimeofUseSchedule
 from timeofuse.timeofuse import create_time_of_use_entry
-from const import SONNEN_OPERATING_MODE_TIME_OF_USE_NAME
+from sonnenbatterie.const import SONNEN_OPERATING_MODE_TIME_OF_USE_NAME
 
 async def test_timeofuse():
     sb = AsyncSonnenBatterie(SONNEN_USERNAME, SONNEN_PASSWORD, SONNEN_IP)

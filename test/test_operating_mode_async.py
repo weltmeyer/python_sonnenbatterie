@@ -11,7 +11,7 @@ sys.path.append("..")
 from login import *
 from pprint import pprint
 from sonnenbatterie import AsyncSonnenBatterie
-from const import *
+from sonnenbatterie.const import *
 
 async def main():
   sb = AsyncSonnenBatterie(SONNEN_USERNAME, SONNEN_PASSWORD, SONNEN_IP)

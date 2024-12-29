@@ -2,9 +2,8 @@ import json
 
 import aiohttp
 import requests
-from aiohttp import ClientTimeout
 
-from const import (
+from .const import (
     DEFAULT_CONNECT_TO_BATTERY_TIMEOUT,
     DEFAULT_READ_FROM_BATTERY_TIMEOUT,
     SONNEN_CONFIGURATION_TOU_SCHEDULE, DEFAULT_BATTERY_LOGIN_TIMEOUT, SONNEN_LATEST_DATA_CHARGE_LEVEL,
@@ -221,7 +220,7 @@ class AsyncSonnenBatterieV2:
             await self._session.close()
             self._session = None
 
-    def _set_timeouts(self) -> ClientTimeout:
+    def _set_timeouts(self) -> aiohttp.ClientTimeout:
         return aiohttp.ClientTimeout(
             total=self._timeout_total,
             connect=self._timeout_connect,

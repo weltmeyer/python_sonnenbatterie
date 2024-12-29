@@ -1,6 +1,7 @@
 # Makefile ;)
 
 dist: clean
+	@pip3 install --upgrade build twine
 	python -m build
 	twine check dist/*
 

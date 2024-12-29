@@ -13,7 +13,7 @@ from pprint import pprint
 from sonnenbatterie2 import SonnenBatterieV2
 from timeofuse import TimeofUseSchedule
 from timeofuse.timeofuse import create_time_of_use_entry
-from const import SONNEN_OPERATING_MODE_TIME_OF_USE_NAME
+from sonnenbatterie2.const import SONNEN_OPERATING_MODE_TIME_OF_USE_NAME
 
 def test_timeofuse():
     sb = SonnenBatterieV2(SONNEN_IP, SONNEN_TOKEN)

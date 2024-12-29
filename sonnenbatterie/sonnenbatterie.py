@@ -1,8 +1,6 @@
 import json
 import sys
 
-from aiohttp import ClientTimeout
-
 from sonnenbatterie2.sonnenbatterie2 import AsyncSonnenBatterieV2
 
 sys.path.append("..")
@@ -12,7 +10,7 @@ import requests
 import aiohttp
 
 from sonnenbatterie2 import SonnenBatterieV2
-from const import *
+from .const import *
 
 
 class sonnenbatterie:
@@ -215,7 +213,7 @@ class AsyncSonnenBatterie:
 
         self._session = None
 
-    def _set_timeouts(self) -> ClientTimeout:
+    def _set_timeouts(self) -> aiohttp.ClientTimeout:
         return aiohttp.ClientTimeout(
             total=self._timeout_total,
             connect=self._timeout_connect,
