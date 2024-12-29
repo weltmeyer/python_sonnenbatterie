@@ -26,12 +26,12 @@ class sonnenbatterie:
         self._batteryReadTimeout = DEFAULT_READ_FROM_BATTERY_TIMEOUT 
         self._batteryRequestTimeout = (self._batteryConnectTimeout, self._batteryReadTimeout)
 
-        self._login()
-
+        self.login()
+        self.token = None
         self.sb2 = SonnenBatterieV2(ip_address=self.ipaddress, api_token=self.token)
 
 
-    def _login(self):
+    def login(self):
         password_sha512 = hashlib.sha512(self.password.encode('utf-8')).hexdigest()
         req_challenge=requests.get(self.baseurl+'challenge', timeout=self._batteryLoginTimeout)
         req_challenge.raise_for_status()
@@ -70,7 +70,7 @@ class sonnenbatterie:
             headers={'Auth-Token': self.token}, timeout=self._batteryRequestTimeout
         )
         if not isretry and response.status_code==401:
-            self._login()
+            self.login()
             return self._get(what,True)
         if response.status_code != 200:
             response.raise_for_status()
@@ -84,7 +84,7 @@ class sonnenbatterie:
             headers={'Auth-Token': self.token,'Content-Type': 'application/json'} , json=payload, timeout=self._batteryRequestTimeout
         )
         if not isretry and response.status_code==401:
-            self._login()
+            self.login()
             return self._put(what, payload,True)
         if response.status_code != 200:
             response.raise_for_status()
@@ -97,7 +97,7 @@ class sonnenbatterie:
             headers={'Auth-Token': self.token,'Content-Type': 'application/json'}, timeout=self._batteryRequestTimeout
         )
         if not isretry and response.status_code==401:
-            self._login()
+            self.login()
             return self._post(what, True)
         if response.status_code != 200:
             response.raise_for_status()
@@ -228,7 +228,7 @@ class AsyncSonnenBatterie:
         if self._session:
             await self._session.close()
 
-    async def _login(self):
+    async def login(self):
         if self._session is None:
             self._session = aiohttp.ClientSession()
 
@@ -267,7 +267,7 @@ class AsyncSonnenBatterie:
 
     async def _get(self, what, isretry=False) -> json:
         if self.token is None:
-            await self._login()
+            await self.login()
 
         url = self.baseurl + what
         response = await self._session.get(
@@ -287,7 +287,7 @@ class AsyncSonnenBatterie:
 
     async def _post(self, what, isretry=False) -> json:
         if self.token is None:
-            await self._login()
+            await self.login()
 
         url = self.baseurl + what
         response = await self._session.post(
@@ -306,7 +306,7 @@ class AsyncSonnenBatterie:
 
     async def _put(self, what, payload, isretry=False) -> json:
         if self.token is None:
-            await self._login()
+            await self.login()
 
         url = self.baseurl + what
         response = await self._session.put(
@@ -353,22 +353,22 @@ class AsyncSonnenBatterie:
 
     async def set_configuration(self, name, value) -> json:
         if self.sb2 is None:
-            await self._login()
+            await self.login()
         return await self.sb2.set_config_item(name, value)
 
     async def get_latest_data(self) -> json:
         if self.sb2 is None:
-            await self._login()
+            await self.login()
         return await self.sb2.get_latest_data()
 
     async def get_configurations(self) -> json:
         if self.sb2 is None:
-            await self._login()
+            await self.login()
         return await self.sb2.get_configurations()
 
     async def get_config_item(self, name) -> json:
         if self.sb2 is None:
-            await self._login()
+            await self.login()
         return await self.sb2.get_config_item(name)
 
 
