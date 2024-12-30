@@ -277,6 +277,7 @@ class AsyncSonnenBatterie:
         )
 
         if not isretry and response.status == 401:
+            await self.login()
             return await self._get(what, True)
 
         if response.status != 200:
@@ -297,6 +298,7 @@ class AsyncSonnenBatterie:
         )
 
         if not isretry and response.status == 401:
+            await self.login()
             return await self._post(what, True)
         if response.status != 200:
             response.raise_for_status()
@@ -317,6 +319,7 @@ class AsyncSonnenBatterie:
         )
 
         if not isretry and response.status == 401:
+            await self.login()
             return await self._put(what, True)
 
         if response.status != 200:
