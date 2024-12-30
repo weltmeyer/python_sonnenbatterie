@@ -45,7 +45,7 @@ class TimeofUse:
         if stop_time == MIDNIGHT:
             stop_time = time.max
         self.stop_time = stop_time
-        self.max_power = max_power
+        self.max_power = max_power if max_power < 22000 else 22000
 
     def __eq__(self, other) -> bool :
         if not isinstance(other, type(self)):
@@ -167,9 +167,9 @@ class TimeofUseSchedule:
             result = result + str(entry.get_as_string())
         return result 
     
-    # retained fore compatibility purposed, is not just a wrapper roung  def load_tou_schedule
-    def load_tou_schedule(self, schedcule):
-        self.load_tou_schedule_from_json(schedcule)
+    # retained fore compatibility purposed, is not just a wrapper around `def load_tou_schedule`
+    def load_tou_schedule(self, schedule):
+        self.load_tou_schedule_from_json(schedule)
 
     # replace the current tou schedule data with the new dicitonary data
     def load_tou_schedule_from_json(self, json_schedule):
