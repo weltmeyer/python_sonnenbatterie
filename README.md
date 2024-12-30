@@ -93,7 +93,7 @@ print(sb2.get_configurations())         # retrieve configuration overview
 print(sb2.get_battery_module_data())    # get battery module data
 print(sb2.get_inverter_data())          # retrieve inverter data
 print(sb2.get_latest_data())            # get latest date from sonnenbatterie
-print(sb2_get_powermeter_data())        # get data from power meters
+print(sb2.get_powermeter_data())        # get data from power meters
 print(sb2.get_status())                 # get overall status information
 print(sb2.get_io_data())                # get io status
 ```
@@ -114,7 +114,7 @@ print(await sb2.get_configurations())         # retrieve configuration overview
 print(await sb2.get_battery_module_data())    # get battery module data
 print(await sb2.get_inverter_data())          # retrieve inverter data
 print(await sb2.get_latest_data())            # get latest date from sonnenbatterie
-print(await sb2_get_powermeter_data())        # get data from power meters
+print(await sb2.get_powermeter_data())        # get data from power meters
 print(await sb2.get_status())                 # get overall status information
 print(await sb2.get_io_data())                # get io status
 # Async needs to close the connection!
