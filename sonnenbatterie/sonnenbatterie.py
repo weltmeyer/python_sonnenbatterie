@@ -224,9 +224,11 @@ class AsyncSonnenBatterie:
     async def logout(self):
         if self.sb2:
             await self.sb2.logout()
+            self.sb2 = None
 
         if self._session:
             await self._session.close()
+            self._session = None
 
     async def login(self):
         if self._session is None:
