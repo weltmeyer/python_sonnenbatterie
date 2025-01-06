@@ -45,7 +45,7 @@ class TimeofUse:
         if stop_time == MIDNIGHT:
             stop_time = time.max
         self.stop_time = stop_time
-        self.max_power = max_power if max_power < 22000 else 22000
+        self.max_power = max_power
 
     def __eq__(self, other) -> bool :
         if not isinstance(other, type(self)):
