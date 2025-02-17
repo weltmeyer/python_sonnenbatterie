@@ -131,6 +131,9 @@ class sonnenbatterie:
     def get_battery(self):
         return self._get(SONNEN_API_PATH_BATTERY)
 
+    def get_api_configuration(self):
+        return self._get(SONNEN_API_PATH_API_CONFIGURATION)
+
     # API v2 calls
     def set_configuration(self, name, value):
         return self.sb2.set_config_item(name, value)
@@ -352,6 +355,9 @@ class AsyncSonnenBatterie:
 
     async def get_battery(self) -> json:
         return await self._get(SONNEN_API_PATH_BATTERY)
+
+    async def get_api_configuration(self) -> json:
+        return await self._get(SONNEN_API_PATH_API_CONFIGURATION)
 
 
     """ API v2 calls """

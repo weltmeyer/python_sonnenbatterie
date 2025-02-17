@@ -47,7 +47,7 @@ sb_pass = 'Password'
 sb = sonnenbatterie(sb_host, sb_user, sb_pass)
 
 print(sb.get_status())	        # retrieve general information
-print(sb.get_powermeters())     # retrieive power meter details
+print(sb.get_powermeter())      # retrieive power meter details
 print(sb.get_batterysystem())   # retrieve battery system data
 print(sb.get_inverter())        # retrieve inverter status
 print(sb.get_systemdata())      # retrieve system data
@@ -67,7 +67,7 @@ sb_pass = 'Password'
 sb = AsyncSonnenBatterie(sb_host, sb_user, sb_pass)
 
 print(await sb.get_status())	      # retrieve general information
-print(await sb.get_powermeters())     # retrieive power meter details
+print(await sb.get_powermeter())      # retrieive power meter details
 print(await sb.get_batterysystem())   # retrieve battery system data
 print(await sb.get_inverter())        # retrieve inverter status
 print(await sb.get_systemdata())      # retrieve system data
