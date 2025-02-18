@@ -32,6 +32,7 @@ SONNEN_API_PATH_SYSTEM_DATA="system_data"
 SONNEN_API_PATH_STATUS="v1/status"
 SONNEN_API_PATH_BATTERY="battery"
 SONNEN_API_PATH_API_CONFIGURATION="json_api/json_api_configuration"
+SONNEN_API_COMMISSIONING_SETTINGS="v1/commissioning_assistant/special_function"
 
 SONNEN_CHARGE_PATH="charge"
 SONNEN_DISCHARGE_PATH="discharge"

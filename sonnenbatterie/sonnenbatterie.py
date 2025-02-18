@@ -134,6 +134,10 @@ class sonnenbatterie:
     def get_api_configuration(self):
         return self._get(SONNEN_API_PATH_API_CONFIGURATION)
 
+    def get_commissioning_settings(self):
+        return self._get(SONNEN_API_COMMISSIONING_SETTINGS)
+
+
     # API v2 calls
     def set_configuration(self, name, value):
         return self.sb2.set_config_item(name, value)
@@ -359,10 +363,11 @@ class AsyncSonnenBatterie:
     async def get_api_configuration(self) -> json:
         return await self._get(SONNEN_API_PATH_API_CONFIGURATION)
 
+    async def get_commissioning_settings(self):
+        return await self._get(SONNEN_API_COMMISSIONING_SETTINGS)
+
 
     """ API v2 calls """
-
-
     async def set_configuration(self, name, value) -> json:
         if self.sb2 is None:
             await self.login()
@@ -385,7 +390,6 @@ class AsyncSonnenBatterie:
 
 
     """ Special functions """
-
     # GET
     async def get_current_charge_level(self) -> int:
         result = await self.get_latest_data()

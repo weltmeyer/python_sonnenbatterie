@@ -46,12 +46,14 @@ sb_pass = 'Password'
 # Init class, establish connection
 sb = sonnenbatterie(sb_host, sb_user, sb_pass)
 
-print(sb.get_status())	        # retrieve general information
-print(sb.get_powermeter())      # retrieive power meter details
-print(sb.get_batterysystem())   # retrieve battery system data
-print(sb.get_inverter())        # retrieve inverter status
-print(sb.get_systemdata())      # retrieve system data
-print(sb.get_battery())         # get battery information
+print(sb.get_status())	                # retrieve general information
+print(sb.get_powermeter())              # retrieive power meter details
+print(sb.get_batterysystem())           # retrieve battery system data
+print(sb.get_inverter())                # retrieve inverter status
+print(sb.get_systemdata())              # retrieve system data
+print(sb.get_battery())                 # get battery information
+print(sb.get_api_configuration())       # get api configuration
+print(sb.get_commissioning_settings())  # get commissioning settings
 ```
 
 ### SonnenAPI v1 - async
@@ -66,13 +68,14 @@ sb_pass = 'Password'
 # Init class, establish connection
 sb = AsyncSonnenBatterie(sb_host, sb_user, sb_pass)
 
-print(await sb.get_status())	      # retrieve general information
-print(await sb.get_powermeter())      # retrieive power meter details
-print(await sb.get_batterysystem())   # retrieve battery system data
-print(await sb.get_inverter())        # retrieve inverter status
-print(await sb.get_systemdata())      # retrieve system data
-print(await sb.get_battery())         # get battery information
-
+print(await sb.get_status())	              # retrieve general information
+print(await sb.get_powermeter())              # retrieive power meter details
+print(await sb.get_batterysystem())           # retrieve battery system data
+print(await sb.get_inverter())                # retrieve inverter status
+print(await sb.get_systemdata())              # retrieve system data
+print(await sb.get_battery())                 # get battery information
+print(await sb.get_api_configuration())       # get api configuration
+print(await sb.get_commissioning_settings())  # get commissioning settings
 # Async needs to close the connection!
 await sb.logout()
 ```
