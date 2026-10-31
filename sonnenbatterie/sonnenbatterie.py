@@ -28,16 +28,17 @@ class sonnenbatterie:
         self._batteryReadTimeout = DEFAULT_READ_FROM_BATTERY_TIMEOUT 
         self._batteryRequestTimeout = (self._batteryConnectTimeout, self._batteryReadTimeout)
 
-        self.login()
         self.token = None
         self.sb2 = SonnenBatterieV2(ip_address=self.ipaddress, api_token=self.token)
+        self.login()
 
 
     def login(self):
 
-        salt = requests.get(self.baseurl+'salt/'+self.username, timeout=self._batteryLoginTimeout, allow_redirects=False)##returns a solt after battery got updated to a certatin version (>1.18??)
+        # returns a salt after battery got updated to a certain version (>1.18??)
+        salt = requests.get(self.baseurl+'salt/'+self.username, timeout=self._batteryLoginTimeout, allow_redirects=False)
         if salt.status_code==200:
-            self.create_session_token_new()
+            self.create_session_token_new(salt.json()["salt"])
         else:
             password_sha512 = hashlib.sha512(self.password.encode('utf-8')).hexdigest()
             req_challenge=requests.get(self.baseurl+'challenge', timeout=self._batteryLoginTimeout)
@@ -50,8 +51,8 @@ class sonnenbatterie:
             token=getsession.json()['authentication_token']
             self.token=token
 
-
-
+        # API v2 uses the same session token
+        self.sb2.api_token = self.token
 
 
     def create_response_from_values(self, username, password, challenge, salt):
@@ -63,11 +64,11 @@ class sonnenbatterie:
         response = hmac.new(key, challenge.encode("utf-8"), hashlib.sha256).hexdigest()
         return response
 
-    def create_session_token_new(self):
+    def create_session_token_new(self, salt=None):
         session = requests.Session()
 
         # Step 1: challenge
-        r = session.get(f"{self.baseurl}challenge", timeout=self._timeout)
+        r = session.get(f"{self.baseurl}challenge", timeout=self._batteryLoginTimeout)
         r.raise_for_status()
         try:
             challenge = r.json()
@@ -76,12 +77,13 @@ class sonnenbatterie:
         except Exception:
             challenge = r.text.strip()
 
-        # Step 2: salt
-        r = session.get(f"{self.baseurl}salt/{self.username}", timeout=self._timeout)
-        r.raise_for_status()
-        salt = r.json()["salt"]
+        # Step 2: salt (unless already fetched by login())
+        if salt is None:
+            r = session.get(f"{self.baseurl}salt/{self.username}", timeout=self._batteryLoginTimeout)
+            r.raise_for_status()
+            salt = r.json()["salt"]
 
-        # Step 4: loop: POST /session, maybe retry with new_challenge
+        # Step 3: loop: POST /session, maybe retry with new_challenge
         for _ in range(2):
             response = self.create_response_from_values(self.username, self.password, challenge, salt)
             payload = {
@@ -93,20 +95,16 @@ class sonnenbatterie:
             r = session.post(
                 url=f"{self.baseurl}session",
                 data=payload,
-                timeout=self._timeout,
+                timeout=self._batteryLoginTimeout,
             )
-            txt = r.text
             if r.status_code >= 400:
-                raise RuntimeError(
-                    f"Login failed with HTTP {r.status_code}\n"
-                    f"URL: {r.url}\n"
-                    f"Payload: {json.dumps(payload)}\n"
-                    f"challenge: {challenge}\n"
-                    f"salt: {salt}\n"
-                    f"response: {response}\n"
-                    f"Server reply: {txt}"
+                # Keep the HTTP status (via r.response). Never include the
+                # payload, challenge, salt or response: together they allow an
+                # offline brute-force of the password.
+                raise requests.HTTPError(
+                    f"Login failed with HTTP {r.status_code}: {r.text[:200]}",
+                    response=r,
                 )
-            r.raise_for_status()
             data = r.json()
 
             if "new_challenge" in data and data["new_challenge"]:
@@ -216,21 +214,32 @@ class sonnenbatterie:
 
 
     # API v2 calls
+    def _call_v2(self, method, *args):
+        # the v2 API uses our session token: on 401 log in again (which also
+        # updates sb2's token) and retry once
+        try:
+            return getattr(self.sb2, method)(*args)
+        except requests.HTTPError as e:
+            if e.response is None or e.response.status_code != 401:
+                raise
+        self.login()
+        return getattr(self.sb2, method)(*args)
+
     def set_configuration(self, name, value):
-        return self.sb2.set_config_item(name, value)
+        return self._call_v2('set_config_item', name, value)
 
     def get_latest_data(self):
-        return self.sb2.get_latest_data()
+        return self._call_v2('get_latest_data')
 
     def get_configurations(self):
-        return self.sb2.get_configurations()
+        return self._call_v2('get_configurations')
 
     # deprecate with 0.7.0 -> get_config_item
     def get_configuration(self, name):
-        return self.sb2.get_config_item(name)
+        return self._call_v2('get_config_item', name)
 
     def get_config_item(self, name):
-        return self.sb2.get_config_item(name)
+        return self._call_v2('get_config_item', name)
     
 
     # these have special handling in some form, for example converting a mode as a number into a string
@@ -315,22 +324,27 @@ class AsyncSonnenBatterie:
             await self._session.close()
             self._session = None
 
+        self.token = None
+
     async def login(self):
         if self._session is None:
             self._session = aiohttp.ClientSession()
 
-        salt =  await self._session.get(self.baseurl+'salt/'+self.username, timeout=self._timeout, allow_redirects=False)##returns a solt after battery got updated to a certatin version (>1.18??)
-        if salt.status==200:
-            await self.create_session_token_new()
+        # returns a salt after battery got updated to a certain version (>1.18??)
+        async with self._session.get(self.baseurl+'salt/'+self.username, timeout=self._timeout, allow_redirects=False) as r:
+            salt = (await r.json())["salt"] if r.status == 200 else None
+
+        if salt is not None:
+            await self.create_session_token_new(salt)
         else:
             pw_sha512 = hashlib.sha512(self.password.encode('utf-8')).hexdigest()
-            req_challenge = await self._session.get(
+            async with self._session.get(
                 self.baseurl+'challenge',
                 timeout=self._timeout,
-            )
-            req_challenge.raise_for_status()
+            ) as req_challenge:
+                req_challenge.raise_for_status()
+                challenge = await req_challenge.json()
 
-            challenge = await req_challenge.json()
             response = hashlib.pbkdf2_hmac(
                 'sha512',
                 pw_sha512.encode('utf-8'),
@@ -339,18 +353,20 @@ class AsyncSonnenBatterie:
                 64
             ).hex()
 
-            session = await self._session.post(
+            async with self._session.post(
                 url = self.baseurl+'session',
                 data = {"user":self.username,"challenge":challenge,"response":response},
                 timeout=self._timeout,
-            )
-            session.raise_for_status()
-            token = await session.json()
+            ) as session:
+                session.raise_for_status()
+                token = await session.json()
             self.token = token['authentication_token']
 
-        # Inisitalite async API v2
+        # Initialize async API v2, or hand it the new token after a re-login
         if self.sb2 is None:
             self.sb2 = AsyncSonnenBatterieV2(ip_address=self.ipaddress, api_token=self.token)
+        else:
+            self.sb2.set_api_token(self.token)
 
 
 
@@ -363,9 +379,9 @@ class AsyncSonnenBatterie:
         response = hmac.new(key, challenge.encode("utf-8"), hashlib.sha256).hexdigest()
         return response
 
-    async def create_session_token_new(self):
+    async def create_session_token_new(self, salt=None):
         # Step 1: challenge
-        async with self._session.get(f"{self.baseurl}challenge") as r:
+        async with self._session.get(f"{self.baseurl}challenge", timeout=self._timeout) as r:
             r.raise_for_status()
             try:
                 challenge = await r.json()
@@ -374,34 +390,32 @@ class AsyncSonnenBatterie:
             except Exception:
                 challenge = (await r.text()).strip()
 
-        # Step 2: salt
-        async with self._session.get(f"{self.baseurl}salt/{self.username}") as r:
-            r.raise_for_status()
-            salt = (await r.json())["salt"]
+        # Step 2: salt (unless already fetched by login())
+        if salt is None:
+            async with self._session.get(f"{self.baseurl}salt/{self.username}", timeout=self._timeout) as r:
+                r.raise_for_status()
+                salt = (await r.json())["salt"]
 
-   
-        # Step 4: loop: POST /session, maybe retry with new_challenge
+        # Step 3: loop: POST /session, maybe retry with new_challenge
         for _ in range(2):
             response = self.create_response_from_values(self.username,self.password,challenge,salt)
             async with self._session.post(
-                
                 url = self.baseurl+'session',
                 data = {"user":self.username,"challenge":challenge,"response":response},
                 timeout=self._timeout,
-
             ) as r:
-                txt = await r.text()
                 if r.status >= 400:
-                    raise RuntimeError(
-                        f"Login failed with HTTP {r.status}\n"
-                        f"URL: {r.url}\n"
-                        f"Payload: {json.dumps(payload)}\n"
-                        f"challenge: {challenge}\n"
-                        f"salt: {salt}\n"
-                        f"response: {response}\n"
-                        f"Server reply: {txt}"
+                    # Keep the HTTP status so callers can tell a rejected login
+                    # (401) from a busy battery (502/503). Never include
+                    # challenge, salt or response: together they allow an
+                    # offline brute-force of the password.
+                    raise aiohttp.ClientResponseError(
+                        r.request_info,
+                        r.history,
+                        status=r.status,
+                        message=f"Login failed: {(await r.text())[:200]}",
+                        headers=r.headers,
                     )
-                r.raise_for_status()
                 data = await r.json()
 
             if "new_challenge" in data and data["new_challenge"]:
@@ -422,67 +436,47 @@ class AsyncSonnenBatterie:
     """ Base functions """
 
 
+    async def _request(self, method, what, headers, isretry=False, **kwargs) -> json:
+        """Send a request with the session token; on 401 log in again and
+        retry once. Responses are always released, also on errors."""
+        if self.token is None or self._session is None:
+            await self.login()
+
+        async with self._session.request(
+            method,
+            url = self.baseurl + what,
+            headers = {'Auth-Token': self.token, **headers},
+            timeout = self._timeout,
+            **kwargs,
+        ) as response:
+            if isretry or response.status != 401:
+                response.raise_for_status()
+                return await response.json()
+
+        await self.login()
+        return await self._request(method, what, headers, True, **kwargs)
+
     async def _get(self, what, isretry=False) -> json:
-        if self.token is None:
-            await self.login()
-
-        url = self.baseurl + what
-        response = await self._session.get(
-            url = url,
-            headers={'Auth-Token': self.token},
-            timeout=self._timeout,
-        )
-
-        if not isretry and response.status == 401:
-            await self.login()
-            return await self._get(what, True)
-
-        if response.status != 200:
-            response.raise_for_status()
-
-        return await response.json()
-
+        return await self._request('GET', what, {}, isretry)
 
     async def _post(self, what, isretry=False) -> json:
-        if self.token is None:
-            await self.login()
-
-        url = self.baseurl + what
-        response = await self._session.post(
-            url = url,
-            headers = {'Auth-Token': self.token, 'Content-Type': 'application/json'},
-            timeout = self._timeout,
-        )
-
-        if not isretry and response.status == 401:
-            await self.login()
-            return await self._post(what, True)
-        if response.status != 200:
-            response.raise_for_status()
-
-        return await response.json()
-
+        return await self._request('POST', what, {'Content-Type': 'application/json'}, isretry)
 
     async def _put(self, what, payload, isretry=False) -> json:
-        if self.token is None:
+        return await self._request('PUT', what, {'Content-Type': 'application/json'}, isretry, json=payload)
+
+    async def _call_v2(self, method, *args) -> json:
+        """Call an API v2 method; the v2 API uses our session token, so on
+        401 log in again (which also updates sb2's token) and retry once."""
+        if self.sb2 is None:
             await self.login()
-
-        url = self.baseurl + what
-        response = await self._session.put(
-            url = url,
-            headers = {'Auth-Token': self.token, 'Content-Type': 'application/json'},
-            json = payload,
-            timeout = self._timeout,
-        )
-
-        if not isretry and response.status == 401:
-            await self.login()
-            return await self._put(what, True)
-
-        if response.status != 200:
-            response.raise_for_status()
-
-        return await response.json()
+        try:
+            return await getattr(self.sb2, method)(*args)
+        except aiohttp.ClientResponseError as e:
+            if e.status != 401:
+                raise
+        await self.login()
+        return await getattr(self.sb2, method)(*args)
 
 
     """ API functions """
@@ -516,24 +510,16 @@ class AsyncSonnenBatterie:
 
     """ API v2 calls """
     async def set_configuration(self, name, value) -> json:
-        if self.sb2 is None:
-            await self.login()
-        return await self.sb2.set_config_item(name, value)
+        return await self._call_v2('set_config_item', name, value)
 
     async def get_latest_data(self) -> json:
-        if self.sb2 is None:
-            await self.login()
-        return await self.sb2.get_latest_data()
+        return await self._call_v2('get_latest_data')
 
     async def get_configurations(self) -> json:
-        if self.sb2 is None:
-            await self.login()
-        return await self.sb2.get_configurations()
+        return await self._call_v2('get_configurations')
 
     async def get_config_item(self, name) -> json:
-        if self.sb2 is None:
-            await self.login()
-        return await self.sb2.get_config_item(name)
+        return await self._call_v2('get_config_item', name)
 
 
     """ Special functions """

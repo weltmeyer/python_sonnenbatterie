@@ -26,34 +26,31 @@ class SonnenBatterieV2:
 
     def set_request_connect_timeout(self, timeout:int = 60):
         self._batteryConnectTimeout = timeout
-        self._batteryRequestTimeout = (self._batteryConnectTimeout, self._batteryRequestTimeout)
+        self._batteryRequestTimeout = (self._batteryConnectTimeout, self._batteryReadTimeout)
 
     def get_request_connect_timeout(self) -> int:
         return self._batteryConnectTimeout
 
     def set_request_read_timeout(self, timeout:int = 120):
         self._batteryReadTimeout = timeout
-        self._batteryRequestTimeout = (self._batteryReadTimeout, self._batteryRequestTimeout)
+        self._batteryRequestTimeout = (self._batteryConnectTimeout, self._batteryReadTimeout)
 
     def get_request_read_timeout(self) -> int:
         return self._batteryReadTimeout
 
-    def _get(self, what, isretry=False):
+    # A 401 is raised right away: retrying with the same token can't succeed.
+    # Callers holding a session token (sonnenbatterie) log in again instead.
+    def _get(self, what):
         url = self.base_url + what
         response = requests.get(
             url,
             headers={'Auth-Token': self.api_token},
             timeout=self._batteryRequestTimeout,
         )
-        if not isretry and response.status_code == 401:
-            return self._get(what, isretry=True)
-
-        if response.status_code != 200:
-            response.raise_for_status()
-
+        response.raise_for_status()
         return response.json()
 
-    def _put(self, what, payload, isretry=False):
+    def _put(self, what, payload):
         url = self.base_url + what
         response = requests.put(
             url,
@@ -61,27 +58,17 @@ class SonnenBatterieV2:
             json=payload,
             timeout=self._batteryRequestTimeout,
         )
-        if not isretry and response.status_code == 401:
-            return self._put(what, payload, isretry=True)
-
-        if response.status_code != 200:
-            response.raise_for_status()
-
+        response.raise_for_status()
         return response.json()
 
-    def _post(self, what, isretry=False):
+    def _post(self, what):
         url = self.base_url + what
         response = requests.post(
             url,
             headers={'Auth-Token': self.api_token, 'Content-Type': 'application/json'},
             timeout=self._batteryRequestTimeout,
         )
-        if not isretry and response.status_code == 401:
-            return self._post(what, isretry=True)
-
-        if response.status_code != 200:
-            response.raise_for_status()
-
+        response.raise_for_status()
         return response.json()
 
     # GET API
@@ -220,6 +207,10 @@ class AsyncSonnenBatterieV2:
             await self._session.close()
             self._session = None
 
+    def set_api_token(self, api_token):
+        """Use a new token, e.g. after the session token was renewed."""
+        self._api_token = api_token
+
     def _set_timeouts(self) -> aiohttp.ClientTimeout:
         return aiohttp.ClientTimeout(
             total=self._timeout_total,
@@ -232,63 +223,31 @@ class AsyncSonnenBatterieV2:
     """ Base functions """
 
 
-    async def _get(self, what, isretry=False) -> json:
+    async def _request(self, method, what, **kwargs) -> json:
+        """Send a request and always release the response, also on errors.
+        A 401 is raised right away: retrying with the same token can't
+        succeed. Callers holding a session token log in again instead."""
         if self._session is None:
             self._session = aiohttp.ClientSession()
 
-        url = self.base_url + what
-        response = await self._session.get(
-            url=url,
+        async with self._session.request(
+            method,
+            url=self.base_url + what,
             headers={'Auth-Token': self._api_token},
             timeout=self._timeout,
-        )
-
-        if not isretry and response.status == 401:
-            return await self._get(what, isretry=True)
-        if response.status != 200:
+            **kwargs,
+        ) as response:
             response.raise_for_status()
+            return await response.json()
 
-        return await response.json()
+    async def _get(self, what) -> json:
+        return await self._request('GET', what)
 
+    async def _put(self, what, payload):
+        return await self._request('PUT', what, json=payload)
 
-    async def _put(self, what, payload, isretry=False):
-        if self._session is None:
-            self._session = aiohttp.ClientSession()
-
-        url = self.base_url + what
-        response = await self._session.put(
-            url=url,
-            headers={'Auth-Token': self._api_token},
-            json=payload,
-            timeout=self._timeout,
-        )
-
-
-        if not isretry and response.status == 401:
-            return await self._put(what, payload, isretry=True)
-        if response.status != 200:
-            response.raise_for_status()
-
-        return await response.json()
-
-
-    async def _post(self, what, isretry=False) -> json:
-        if self._session is None:
-            self._session = aiohttp.ClientSession()
-
-        url = self.base_url + what
-        response = await self._session.post(
-            url=url,
-            headers={'Auth-Token': self._api_token},
-            timeout=self._timeout,
-        )
-
-        if not isretry and response.status == 401:
-            return await self._post(what, isretry=True)
-        if response.status != 200:
-            response.raise_for_status()
-
-        return await response.json()
+    async def _post(self, what) -> json:
+        return await self._request('POST', what)
 
 
     """ API function """
