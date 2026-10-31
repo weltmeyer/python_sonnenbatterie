@@ -12,6 +12,7 @@ import aiohttp
 
 from sonnenbatterie2 import SonnenBatterieV2
 from .const import *
+from .errors import LoginError, AsyncLoginError, LoginBlockedError, _LoginBlock, parse_block_time
 
 
 # noinspection PyPep8Naming
@@ -30,10 +31,14 @@ class sonnenbatterie:
 
         self.token = None
         self.sb2 = SonnenBatterieV2(ip_address=self.ipaddress, api_token=self.token)
+        self._login_block = _LoginBlock()
         self.login()
 
 
     def login(self):
+        # after too many failed logins the battery blocks for a while; do not
+        # extend the block by trying again before it expires
+        self._login_block.check()
 
         # returns a salt after battery got updated to a certain version (>1.18??)
         salt = requests.get(self.baseurl+'salt/'+self.username, timeout=self._batteryLoginTimeout, allow_redirects=False)
@@ -47,12 +52,22 @@ class sonnenbatterie:
             response=hashlib.pbkdf2_hmac('sha512',password_sha512.encode('utf-8'),challenge.encode('utf-8'),7500,64).hex()
             
             getsession=requests.post(self.baseurl+'session',{"user":self.username,"challenge":challenge,"response":response}, timeout=self._batteryLoginTimeout)
-            getsession.raise_for_status()
+            if getsession.status_code >= 400:
+                self._raise_login_error(getsession)
             token=getsession.json()['authentication_token']
             self.token=token
 
+        self._login_block.clear()
         # API v2 uses the same session token
         self.sb2.api_token = self.token
+
+    def _raise_login_error(self, r):
+        # Keep the HTTP status (via r.response). Never include the payload,
+        # challenge, salt or response: together they allow an offline
+        # brute-force of the password.
+        error = LoginError(f"Login failed with HTTP {r.status_code}: {r.text[:200]}", response=r)
+        self._login_block.set(error.block_time)
+        raise error
 
 
     def create_response_from_values(self, username, password, challenge, salt):
@@ -98,13 +113,7 @@ class sonnenbatterie:
                 timeout=self._batteryLoginTimeout,
             )
             if r.status_code >= 400:
-                # Keep the HTTP status (via r.response). Never include the
-                # payload, challenge, salt or response: together they allow an
-                # offline brute-force of the password.
-                raise requests.HTTPError(
-                    f"Login failed with HTTP {r.status_code}: {r.text[:200]}",
-                    response=r,
-                )
+                self._raise_login_error(r)
             data = r.json()
 
             if "new_challenge" in data and data["new_challenge"]:
@@ -306,6 +315,7 @@ class AsyncSonnenBatterie:
         self.sb2 = None
 
         self._session = None
+        self._login_block = _LoginBlock()
 
     def _set_timeouts(self) -> aiohttp.ClientTimeout:
         return aiohttp.ClientTimeout(
@@ -327,6 +337,10 @@ class AsyncSonnenBatterie:
         self.token = None
 
     async def login(self):
+        # after too many failed logins the battery blocks for a while; do not
+        # extend the block by trying again before it expires
+        self._login_block.check()
+
         if self._session is None:
             self._session = aiohttp.ClientSession()
 
@@ -358,10 +372,12 @@ class AsyncSonnenBatterie:
                 data = {"user":self.username,"challenge":challenge,"response":response},
                 timeout=self._timeout,
             ) as session:
-                session.raise_for_status()
+                if session.status >= 400:
+                    await self._raise_login_error(session)
                 token = await session.json()
             self.token = token['authentication_token']
 
+        self._login_block.clear()
         # Initialize async API v2, or hand it the new token after a re-login
         if self.sb2 is None:
             self.sb2 = AsyncSonnenBatterieV2(ip_address=self.ipaddress, api_token=self.token)
@@ -405,17 +421,7 @@ class AsyncSonnenBatterie:
                 timeout=self._timeout,
             ) as r:
                 if r.status >= 400:
-                    # Keep the HTTP status so callers can tell a rejected login
-                    # (401) from a busy battery (502/503). Never include
-                    # challenge, salt or response: together they allow an
-                    # offline brute-force of the password.
-                    raise aiohttp.ClientResponseError(
-                        r.request_info,
-                        r.history,
-                        status=r.status,
-                        message=f"Login failed: {(await r.text())[:200]}",
-                        headers=r.headers,
-                    )
+                    await self._raise_login_error(r)
                 data = await r.json()
 
             if "new_challenge" in data and data["new_challenge"]:
@@ -432,6 +438,22 @@ class AsyncSonnenBatterie:
 
 
 
+
+    async def _raise_login_error(self, r):
+        # Keep the HTTP status so callers can tell a rejected login (401) from
+        # a busy battery (502/503). Never include challenge, salt or response:
+        # together they allow an offline brute-force of the password.
+        text = await r.text()
+        error = AsyncLoginError(
+            r.request_info,
+            r.history,
+            status=r.status,
+            message=f"Login failed: {text[:200]}",
+            headers=r.headers,
+            block_time=parse_block_time(text),
+        )
+        self._login_block.set(error.block_time)
+        raise error
 
     """ Base functions """
 

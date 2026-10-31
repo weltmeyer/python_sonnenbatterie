@@ -123,3 +123,26 @@ print(await sb2.get_io_data())                # get io status
 # Async needs to close the connection!
 await sb.logout()
 ```
+
+### Login errors
+
+A rejected login raises `sonnenbatterie.LoginError` (a `requests.HTTPError`,
+sync) or `sonnenbatterie.AsyncLoginError` (an `aiohttp.ClientResponseError`,
+async); the HTTP status tells a wrong password (401) from a busy battery
+(502/503). After too many failed attempts the battery blocks logins for a
+while and reports the duration in minutes; it is available as `block_time`
+on the exception (`None` if the battery did not report one). While such a
+block is active the client does not contact the battery again and raises
+`sonnenbatterie.LoginBlockedError` (with `retry_after` in seconds) instead, so
+that the block is not extended.
+
+```python
+from sonnenbatterie import sonnenbatterie, LoginError, LoginBlockedError
+
+try:
+    sb = sonnenbatterie(SONNEN_USERNAME, SONNEN_PASSWORD, SONNEN_IP)
+except LoginBlockedError as e:
+    print(f"blocked, retry in {e.retry_after:.0f} s")
+except LoginError as e:
+    print(f"login failed with HTTP {e.response.status_code}, block_time={e.block_time}")
+```
