@@ -34,5 +34,23 @@ SONNEN_API_PATH_BATTERY="battery"
 SONNEN_API_PATH_API_CONFIGURATION="json_api/json_api_configuration"
 SONNEN_API_COMMISSIONING_SETTINGS="v1/commissioning_assistant/special_function"
 
+# Unofficial endpoints, used by the battery's own web dashboard (found in its
+# code). Read-only GETs; they need the session token from the username/
+# password login (the static API token can't read them). Experimental: their
+# responses on a cascade (several batteries acting as one system) are
+# unconfirmed so far.
+# - role in a cascade: {"role": "none"|"master"|"slave", "data": ..., "country": ...}
+SONNEN_API_PATH_STACKING_STATUS="stacking_status"
+# - backup/protect configuration of a cascade: {"master": {...}, "slaves": [...]},
+#   HTTP 400 "not a stack" on a single battery
+SONNEN_API_PATH_STACKING_PROTECT="v1/commissioning_assistant/special_function/stacking/protect"
+# - inverter sync status of a cascade: {"master": {...}, "slaves": [...]},
+#   needs a role above User (HTTP 401 for User)
+SONNEN_API_PATH_INVERTER_STACKING_STATUS="v1/commissioning_assistant/inverter/stacking/status"
+# - configuration items, incl. DE_Ticket_Number (the serial number), which
+#   the static API token can't read (v2/configurations/DE_Ticket_Number: 403)
+SONNEN_API_PATH_CONFIGS="configs"
+SONNEN_CONFIG_SERIAL_NUMBER="DE_Ticket_Number"
+
 SONNEN_CHARGE_PATH="charge"
 SONNEN_DISCHARGE_PATH="discharge"

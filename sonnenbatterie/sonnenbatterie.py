@@ -13,6 +13,7 @@ import aiohttp
 from sonnenbatterie2 import SonnenBatterieV2
 from .const import *
 from .errors import LoginError, AsyncLoginError, LoginBlockedError, _LoginBlock, parse_block_time
+from .cascade import CASCADE_ENDPOINTS, NOT_AVAILABLE, CascadeInfo, build_cascade_info
 
 
 # noinspection PyPep8Naming
@@ -220,6 +221,46 @@ class sonnenbatterie:
 
     def get_commissioning_settings(self):
         return self._get(SONNEN_API_COMMISSIONING_SETTINGS)
+
+
+    # Unofficial endpoints of the web dashboard (experimental, see README)
+    def get_stacking_status(self):
+        return self._get(SONNEN_API_PATH_STACKING_STATUS)
+
+    def get_stacking_protect(self):
+        return self._get(SONNEN_API_PATH_STACKING_PROTECT)
+
+    def get_inverter_stacking_status(self):
+        # a 401 here means "role not permitted" (e.g. for User), not an
+        # expired session: don't log in again
+        return self._get(SONNEN_API_PATH_INVERTER_STACKING_STATUS, isretry=True)
+
+    def get_configs(self):
+        return self._get(SONNEN_API_PATH_CONFIGS)
+
+    def get_config(self, name):
+        return self._get(f"{SONNEN_API_PATH_CONFIGS}/{name}")
+
+    def get_serial_number(self) -> str:
+        return self.get_config(SONNEN_CONFIG_SERIAL_NUMBER).get(SONNEN_CONFIG_SERIAL_NUMBER)
+
+    def get_cascade_info(self) -> CascadeInfo:
+        """Role and members of a cascade; endpoints that aren't available
+        (single battery, role not permitted, older firmware) count as None."""
+        readers = {
+            SONNEN_API_PATH_STACKING_STATUS: self.get_stacking_status,
+            SONNEN_API_PATH_STACKING_PROTECT: self.get_stacking_protect,
+            SONNEN_API_PATH_INVERTER_STACKING_STATUS: self.get_inverter_stacking_status,
+        }
+        raw = {}
+        for path in CASCADE_ENDPOINTS:
+            try:
+                raw[path] = readers[path]()
+            except requests.HTTPError as e:
+                if e.response is None or e.response.status_code not in NOT_AVAILABLE:
+                    raise
+                raw[path] = None
+        return build_cascade_info(raw)
 
 
     # API v2 calls
@@ -528,6 +569,46 @@ class AsyncSonnenBatterie:
 
     async def get_commissioning_settings(self):
         return await self._get(SONNEN_API_COMMISSIONING_SETTINGS)
+
+
+    """ Unofficial endpoints of the web dashboard (experimental, see README) """
+    async def get_stacking_status(self) -> json:
+        return await self._get(SONNEN_API_PATH_STACKING_STATUS)
+
+    async def get_stacking_protect(self) -> json:
+        return await self._get(SONNEN_API_PATH_STACKING_PROTECT)
+
+    async def get_inverter_stacking_status(self) -> json:
+        # a 401 here means "role not permitted" (e.g. for User), not an
+        # expired session: don't log in again
+        return await self._get(SONNEN_API_PATH_INVERTER_STACKING_STATUS, isretry=True)
+
+    async def get_configs(self) -> json:
+        return await self._get(SONNEN_API_PATH_CONFIGS)
+
+    async def get_config(self, name) -> json:
+        return await self._get(f"{SONNEN_API_PATH_CONFIGS}/{name}")
+
+    async def get_serial_number(self) -> str:
+        return (await self.get_config(SONNEN_CONFIG_SERIAL_NUMBER)).get(SONNEN_CONFIG_SERIAL_NUMBER)
+
+    async def get_cascade_info(self) -> CascadeInfo:
+        """Role and members of a cascade; endpoints that aren't available
+        (single battery, role not permitted, older firmware) count as None."""
+        readers = {
+            SONNEN_API_PATH_STACKING_STATUS: self.get_stacking_status,
+            SONNEN_API_PATH_STACKING_PROTECT: self.get_stacking_protect,
+            SONNEN_API_PATH_INVERTER_STACKING_STATUS: self.get_inverter_stacking_status,
+        }
+        raw = {}
+        for path in CASCADE_ENDPOINTS:
+            try:
+                raw[path] = await readers[path]()
+            except aiohttp.ClientResponseError as e:
+                if e.status not in NOT_AVAILABLE:
+                    raise
+                raw[path] = None
+        return build_cascade_info(raw)
 
 
     """ API v2 calls """

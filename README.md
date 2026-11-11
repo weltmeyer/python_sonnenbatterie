@@ -146,3 +146,35 @@ except LoginBlockedError as e:
 except LoginError as e:
     print(f"login failed with HTTP {e.response.status_code}, block_time={e.block_time}")
 ```
+
+### Unofficial endpoints (experimental)
+
+The battery's own web dashboard uses a few endpoints that aren't part of the
+documented API. They are read-only, and they need the session from the
+username/password login (the static API token of the v2 API can't read them).
+Their responses on a cascade (several batteries acting as one system) are
+unconfirmed so far, so the parsing may still change.
+
+```python
+# serial number (DE_Ticket_Number) and the other configuration items
+print(sb.get_serial_number())
+print(sb.get_configs())                   # or sb.get_config("DE_Ticket_Number")
+
+# cascade: role ("none", "master", "slave", "unknown") and, if an endpoint
+# lists them, the members with their serial numbers
+info = sb.get_cascade_info()              # async: await sb.get_cascade_info()
+print(info.role, info.is_cascade)
+for member in info.members:
+    print(member.role, member.serial)
+print(info.raw)                           # raw responses, None = not available
+
+# the raw endpoints
+sb.get_stacking_status()                  # {"role": ..., "data": ..., "country": ...}
+sb.get_stacking_protect()                 # HTTP 400 "not a stack" on a single battery
+sb.get_inverter_stacking_status()         # needs a role above User (HTTP 401 for User)
+```
+
+`get_cascade_info()` treats "not a stack" (400), "role not permitted"
+(401/403) and "endpoint unknown" (404) as not available; other errors are
+raised. A 401 of `get_inverter_stacking_status()` doesn't trigger a new login,
+as it means the role isn't permitted rather than an expired session.
