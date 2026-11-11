@@ -37,15 +37,16 @@ SONNEN_API_COMMISSIONING_SETTINGS="v1/commissioning_assistant/special_function"
 # Unofficial endpoints, used by the battery's own web dashboard (found in its
 # code). Read-only GETs; they need the session token from the username/
 # password login (the static API token can't read them). Experimental: their
-# responses on a cascade (several batteries acting as one system) are
-# unconfirmed so far.
-# - role in a cascade: {"role": "none"|"master"|"slave", "data": ..., "country": ...}
+# responses on a cascade (several batteries acting as one system) are only
+# confirmed for masters so far (see cascade.py).
+# - role in a cascade: {"role": "none"|"master"|"slave", "data": ..., "country": ...},
+#   on a master data = {"master": {serial: {...}}, "slaves": {serial: {...}}}
 SONNEN_API_PATH_STACKING_STATUS="stacking_status"
 # - backup/protect configuration of a cascade: {"master": {...}, "slaves": [...]},
 #   HTTP 400 "not a stack" on a single battery
 SONNEN_API_PATH_STACKING_PROTECT="v1/commissioning_assistant/special_function/stacking/protect"
 # - inverter sync status of a cascade: {"master": {...}, "slaves": [...]},
-#   needs a role above User (HTTP 401 for User)
+#   needs a role above User (HTTP 401 for User, works for Installer)
 SONNEN_API_PATH_INVERTER_STACKING_STATUS="v1/commissioning_assistant/inverter/stacking/status"
 # - configuration items, incl. DE_Ticket_Number (the serial number), which
 #   the static API token can't read (v2/configurations/DE_Ticket_Number: 403)

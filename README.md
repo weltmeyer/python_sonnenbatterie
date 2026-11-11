@@ -152,26 +152,31 @@ except LoginError as e:
 The battery's own web dashboard uses a few endpoints that aren't part of the
 documented API. They are read-only, and they need the session from the
 username/password login (the static API token of the v2 API can't read them).
-Their responses on a cascade (several batteries acting as one system) are
-unconfirmed so far, so the parsing may still change.
+Their responses on a cascade (several batteries acting as one system) have
+been checked on two real cascade masters so far (two and three units,
+firmware 1.40.5), so the parsing may still change, e.g. for what a slave
+reports.
 
 ```python
 # serial number (DE_Ticket_Number) and the other configuration items
 print(sb.get_serial_number())
 print(sb.get_configs())                   # or sb.get_config("DE_Ticket_Number")
 
-# cascade: role ("none", "master", "slave", "unknown") and, if an endpoint
-# lists them, the members with their serial numbers
+# cascade: role ("none", "master", "slave", "unknown") and, if the endpoints
+# list them, the members, merged by serial number across the endpoints
 info = sb.get_cascade_info()              # async: await sb.get_cascade_info()
 print(info.role, info.is_cascade)
 for member in info.members:
-    print(member.role, member.serial)
+    # status ("WORKING") from stacking_status; raw also has e.g. ip,
+    # backup_buffer and protect_active
+    print(member.role, member.serial, member.status, member.raw)
+print(info.members_sources)               # endpoints the members came from
 print(info.raw)                           # raw responses, None = not available
 
 # the raw endpoints
-sb.get_stacking_status()                  # {"role": ..., "data": ..., "country": ...}
+sb.get_stacking_status()                  # {"role": ..., "data": {"master": {serial: {...}}, "slaves": {serial: {...}}}, ...}
 sb.get_stacking_protect()                 # HTTP 400 "not a stack" on a single battery
-sb.get_inverter_stacking_status()         # needs a role above User (HTTP 401 for User)
+sb.get_inverter_stacking_status()         # needs a role above User (HTTP 401 for User, works for Installer)
 ```
 
 `get_cascade_info()` treats "not a stack" (400), "role not permitted"
