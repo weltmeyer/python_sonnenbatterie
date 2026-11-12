@@ -37,10 +37,11 @@ SONNEN_API_COMMISSIONING_SETTINGS="v1/commissioning_assistant/special_function"
 # Unofficial endpoints, used by the battery's own web dashboard (found in its
 # code). Read-only GETs; they need the session token from the username/
 # password login (the static API token can't read them). Experimental: their
-# responses on a cascade (several batteries acting as one system) are only
-# confirmed for masters so far (see cascade.py).
+# responses on a cascade (several batteries acting as one system) are
+# confirmed for masters and slaves (see cascade.py).
 # - role in a cascade: {"role": "none"|"master"|"slave", "data": ..., "country": ...},
-#   on a master data = {"master": {serial: {...}}, "slaves": {serial: {...}}}
+#   on a master data = {"master": {serial: {...}}, "slaves": {serial: {...}}},
+#   on a slave data = null
 SONNEN_API_PATH_STACKING_STATUS="stacking_status"
 # - backup/protect configuration of a cascade: {"master": {...}, "slaves": [...]},
 #   HTTP 400 "not a stack" on a single battery

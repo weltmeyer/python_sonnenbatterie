@@ -153,9 +153,9 @@ The battery's own web dashboard uses a few endpoints that aren't part of the
 documented API. They are read-only, and they need the session from the
 username/password login (the static API token of the v2 API can't read them).
 Their responses on a cascade (several batteries acting as one system) have
-been checked on two real cascade masters so far (two and three units,
-firmware 1.40.5), so the parsing may still change, e.g. for what a slave
-reports.
+been checked on two real cascades so far (two and three units, firmware
+1.40.5, masters and slaves), so the parsing may still change. Only the master
+lists the cascade's members; a slave reports just its role.
 
 ```python
 # serial number (DE_Ticket_Number) and the other configuration items

@@ -1,8 +1,9 @@
 """Unofficial cascade/config endpoints against a fake battery (no hardware needed).
 
-All responses are real (sonnenBatterie 10, firmware 1.40.5; IPs replaced): a
-single battery and the master of a two-unit cascade with user "User", and the
-master of a three-unit cascade with user "Installer".
+All responses are real (sonnenBatterie 10, firmware 1.40.5; serials and IPs
+replaced): a single battery; the master and a slave of a two-unit cascade
+with user "User"; the master and a slave of a three-unit cascade with user
+"Installer".
 
 Run with: python -m pytest test/test_cascade.py
 """
@@ -64,6 +65,20 @@ CASCADE_MASTER_INSTALLER = {
     "inverter_stacking": (200, {"master": {**_INVERTER, "serial": "200001"},
                                 "slaves": [{**_INVERTER, "ip": "192.0.2.39", "serial": "200002"},
                                            {**_INVERTER, "ip": "192.0.2.66", "serial": "200003"}]}),
+}
+
+# a cascade's slave knows only its role: stacking_status has no data, the
+# other endpoints answer "not a stack" (inverter status: 401 for User, 400 for
+# Installer)
+CASCADE_SLAVE = {
+    "stacking_status": (200, {"country": "BE", "data": None, "role": "slave"}),
+    "protect": (400, {"error": "not a stack"}),
+    "inverter_stacking": (401, {"error": "401 Unauthorized"}),
+}
+CASCADE_SLAVE_INSTALLER = {
+    "stacking_status": (200, {"country": "DE", "data": None, "role": "slave"}),
+    "protect": (400, {"error": "not a stack"}),
+    "inverter_stacking": (400, {"error": "not a stack"}),
 }
 
 
@@ -198,6 +213,18 @@ def test_async_cascade_master_with_inverter_status(battery):
     assert battery.logins == 1
 
 
+@pytest.mark.parametrize("responses", [CASCADE_SLAVE, CASCADE_SLAVE_INSTALLER])
+def test_async_cascade_slave(battery, responses):
+    battery.responses = dict(responses)
+    info = run(async_cascade_info(battery))
+    # a slave is a cascade, but doesn't list the members: only the master does
+    assert info.role == "slave" and info.is_cascade
+    assert info.members == [] and info.members_sources == []
+    assert info.raw[SONNEN_API_PATH_STACKING_PROTECT] is None
+    assert info.raw[SONNEN_API_PATH_INVERTER_STACKING_STATUS] is None
+    assert battery.logins == 1
+
+
 def test_async_unexpected_error_is_raised(battery):
     battery.responses["protect"] = (500, {"error": "boom"})
     with pytest.raises(aiohttp.ClientResponseError) as exc:
@@ -256,13 +283,13 @@ def test_parse_members(data, expected):
     assert [(m.role, m.serial) for m in parse_members(data)] == expected
 
 
-def test_members_from_inverter_status_when_protect_unavailable():
+def test_members_from_inverter_status_when_others_list_none():
     info = build_cascade_info({
-        SONNEN_API_PATH_STACKING_STATUS: {"role": "slave", "data": None},
+        SONNEN_API_PATH_STACKING_STATUS: {"role": "master", "data": None},
         SONNEN_API_PATH_STACKING_PROTECT: None,
         SONNEN_API_PATH_INVERTER_STACKING_STATUS: {"master": {"serial": "1"}, "slaves": [{"serial": "2"}]},
     })
-    assert info.role == "slave" and info.is_cascade
+    assert info.role == "master" and info.is_cascade
     assert info.members_sources == [SONNEN_API_PATH_INVERTER_STACKING_STATUS] and len(info.members) == 2
 
 

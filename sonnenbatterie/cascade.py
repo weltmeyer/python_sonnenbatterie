@@ -3,8 +3,8 @@ dashboard (experimental, see README).
 
 A cascade is a group of batteries acting as one system: one master, one or
 more slaves. The dashboard reads it from three endpoints (see const.py). On
-real cascade masters (sonnenBatterie 10, firmware 1.40.5; two and three units)
-they answer like this:
+real cascades (sonnenBatterie 10, firmware 1.40.5; two and three units) the
+masters answer like this:
 
 - stacking_status: members keyed by serial number
     {"role": "master", "country": "BE",
@@ -18,6 +18,11 @@ they answer like this:
     {"master": {"serial": "200001", "grid_code_status": "set",
                 "inverter_grid_code": "4901", "installed_version1": "3.18.0", ...},
      "slaves": [{"serial": "200002", "ip": "...", ...}, ...]}
+
+A slave only knows its role: stacking_status {"role": "slave", "data": null},
+stacking/protect HTTP 400 "not a stack", inverter/stacking/status HTTP 401
+(User) or 400 "not a stack" (Installer). So the members, and the slaves' IPs,
+are only available from the master.
 
 Members are merged by serial number across the endpoints, so each member's
 raw dict holds the fields of all of them. The raw responses are always kept in
